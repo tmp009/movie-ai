@@ -12,7 +12,7 @@ if (process.argv.length < 4) {
     exit(0)
 } 
 
-async function main() {
+async function main(attempt) {
     const inputFile =  process.argv[2];
     const outFile =  process.argv[3];
     const data = await fs.readFile(inputFile, {encoding: 'utf-8'})
@@ -25,13 +25,12 @@ async function main() {
                 "time": "Day",
                 "location": "",
                 "set": {
-                    "INT": false,
-                    "EXT": false,
+                    "type": ["INT", "EXT"],
                     "description": ""
                 },
                 "elements": {
                     "cast_members": [{"name": "", "age": ""}],
-                    "backgorund_actors": [{"name": "", "age": ""}],
+                    "background_actors": [{"name": "", "age": ""}],
                     "stunts": [""],
                     "vehicles": [""],
                     "props": [""],
@@ -54,7 +53,8 @@ async function main() {
     }
     const messages = [
         {role:'system', content: 'Convert the given movie script into json. Try to populate all fields in the json structure for each scene.'},
-        {role:'system', content: 'Do not add any new json fields. From "elements" remove any fields with a empty list or string.'},
+        {role:'system', content: 'Do not add any new json fields. Always include "elements" even if it has empty object. From "elements" remove any fields with a empty list or string.'},
+        {role:'system', content: 'Pay close attention to cast members, background actors, stunts and other elements. Return valid JSON data.'},
         {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: data}
     ]
@@ -62,10 +62,26 @@ async function main() {
     const completion = await openai.chat.completions.create({
         messages: messages,
         model: 'gpt-4-1106-preview',
-        response_format: {'type': 'json_object'}
+        response_format: {'type': 'json_object'},
+        temperature: 0.35
     });
 
-    await fs.writeFile(outFile, completion.choices[0].message.content);
+    const resp = completion.choices[0].message.content
+
+    try {
+        JSON.parse(resp);
+    } catch (error) {
+        if (attempt < process.env.OPENAI_RETRY) {
+            console.error('Received invalid JSON data! Retrying...');
+            main(attempt+1)
+        } else {
+            console.error('Failed to receive valid JSON data.')
+            console.error(error.message)
+            exit(1)
+        }
+    }
+
+    await fs.writeFile(outFile, resp);
 }
 
-main();
+main(0);

@@ -41,7 +41,7 @@ function splitScenes(data) {
 async function scriptToMetadata(text) {
     const messages = [
         {role:'system', content: 'Use the given movie script to generate metadata for each scene.'},
-        {role:'system', content: 'Metadata includes at minimum: scene number, actor\'s  name, age and death, the stunts performed and background actors'},
+        {role:'system', content: 'Metadata includes at minimum: scene number, actor\'s  name, age and death, the performed stunts, and background actors'},
         {role:'system', content: 'Put the actor\'s age in all scenes where they appear regardless of if it is mentioned in the scene'},
         {role:'user', content: text}
     ]

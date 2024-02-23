@@ -3,10 +3,14 @@ require('dotenv').config();
 const fs = require('fs/promises');
 const { exit } = require('process');
 
+const RobotClient = require('./client')
+const client = new RobotClient('http://0.0.0.0',3000);
+
+
 if (process.argv.length < 3) {
     console.log(`node robot.js <script.json>`)
     exit(0)
-} 
+}
 
 async function main() {
     const inputFile =  process.argv[2];
@@ -14,31 +18,100 @@ async function main() {
     let jsonData;
 
     try {
-        jsonData = JSON.parse(data)
+        jsonData = JSON.parse(data);
     } catch (error) {
-        console.error('Failed to parse JSON data!')
-        console.error(error.message)
-        exit(1);
+        console.error('Failed to parse JSON data!');
+        console.error(error.message);
+
+        return
     }
 
-    jsonData.scenes.forEach(scene => {
+    for (let i = 0; i < 5; i++) {
+        console.log(5-i)
+        await new Promise(r => setTimeout(r, 1000));
+    }
 
+    await client.setForeground();
+
+
+    for (const scene of jsonData.scenes) {
         // row 1
-        console.log(jsonData.scenes.length)
-        console.log(scene.scene_number)
-        console.log(scene.set.type.join('/'))
-        console.log(scene.set.description)
-        console.log(scene.time)
+        await client.writeTextTab(scene.scene_number)
+
+        if (scene.set.type.length > 1)  { // INT/EXT
+            await client.keyTap('down');
+            await client.keyTap('down');
+            await client.keyTap('down');
+        } else if (scene.set.type[0].toUpperCase() == 'INT') {
+            await client.keyTap('down');
+        } else if (scene.set.type[0].toUpperCase() == 'EXT') {
+            await client.keyTap('down');
+            await client.keyTap('down');
+        }
+
+        await client.keyTap('tab');
+        
+        await client.writeTextTab(scene.set.description)
+        
+        switch (scene.time.toUpperCase()) {
+            case 'DAY':
+                await client.keyTap('down');
+                break;
+
+            
+            case 'NIGHT':
+                await client.keyTap('down');
+                await client.keyTap('down');
+                break;
+
+            case 'MORNING':
+                await client.keyTap('down');
+                await client.keyTap('down');
+                await client.keyTap('down');
+                break;
+            
+            case 'EVENING':
+                await client.keyTap('down');
+                await client.keyTap('down');
+                await client.keyTap('down');
+                await client.keyTap('down');
+                break;
+        
+            default:
+                break;
+        }
+
+        await client.keyTap('tab');
+        await client.keyTap('tab');
+        await client.keyTap('tab');
+
 
         // row 2
-        console.log(scene.synopsis)
+        await client.writeTextTab(scene.synopsis)
 
         // row 3
+        await client.keyTap('tab');
+        await client.keyTap('tab');
+        await client.keyTap('tab');
+        await client.keyTap('tab');
+
         
-
         // row 4
-        console.log(scene.location)
+        await client.writeTextTab(scene.location)
+        await client.keyTap('tab');
+        await client.keyTap('tab');
+        await client.keyTap('tab');
 
+        // escape elements field
+        // await client.sendMultipleKeys(['right', 'down', 'tab'])
+        await client.keyTap('right');
+        await client.keyTap('down');
+        await client.keyTap('tab');
+
+        // Change scene
+        await client.keyToggle("ctrl", true);
+        await client.keyTap("right");
+        await client.keyToggle("ctrl", false)
 
         // Elements
         scene?.elements?.cast_members?.forEach(actor => console.log(actor.name, actor.age))
@@ -76,8 +149,7 @@ async function main() {
         scene?.elements?.notes?.forEach(note => console.log(note))
         
         console.log('')
-    });
+    }
 }
-
 
 main();

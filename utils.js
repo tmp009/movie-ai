@@ -1,4 +1,3 @@
-const robot = require("robotjs");
 const { execSync } = require('child_process');
 
 async function copyToClipboard(text) {

@@ -1,6 +1,5 @@
 const { Hardware, getAllWindows } = require('keysender')
 const utils = require('./utils')
-const robot = require("robotjs");
 const express = require('express');
 
 const app = express();
@@ -8,34 +7,82 @@ const app = express();
 const window = getAllWindows().find((window)=>{
     return window.title.startsWith('Movie Magic Scheduling 6')
 })
+
 const program = new Hardware(null, window.className)
 
 app.use(express.json())
 
+app.get('/stop', (req,res)=>{
+    res.json({status:200})
+    process.exit(0)
+})
+
 app.post('/set/foreground', (req,res)=>{
-    console.log(program.workwindow.getView().x)
     program.workwindow.setForeground();
     res.json({status:200})
 })
 
-app.post('/mouse/:x/:y', (req,res) => {
-    try {
-        const xPos = req.params.x;
-        const yPos = req.params.y;
-    
-        robot.moveMouse(xPos, yPos)
-        res.json({status:200})
+app.get('/mouse/coord', async (req,res) => {
+    try {  
+        const mousePos = program.mouse.getPos()
+        res.json({x:mousePos.x, y:mousePos.y})
         
     } catch (error) {
+        console.error(error)
         res.json({error:error.message})
     }
 })
 
-app.post('/keyboard/:key', async (req,res) => {
+app.post('/mouse/move', async (req,res) => {
     try {
-        const key = req.params.key;
+        const xPos = Number(req.body.x);
+        const yPos = Number(req.body.y);
+
+        if (!xPos) {
+            return res.json({error:'Missing parameter "x"'})
+        }
+
+        if (!yPos) {
+            return res.json({error:'Missing parameter "y"'})
+        }
+
+        await program.mouse.moveTo(xPos, yPos);
     
-        await program.keyboard.sendKey(key, 35, 50)
+        res.json({status:200})
+        
+    } catch (error) {
+        console.error(error)
+        res.json({error:error.message})
+    }
+})
+
+app.post('/mouse/click', async (req,res) => {
+    try {
+        const button = req.body.button;
+
+        if (!button) {
+            return res.json({error:'Missing parameter "button"'})
+        }
+
+        await program.mouse.click(button);
+        
+        res.json({status:200})
+        
+    } catch (error) {
+        console.error(error)
+        res.json({error:error.message})
+    }
+})
+
+app.post('/keyboard/key', async (req,res) => {
+    try {
+        const key = req.body.key;
+
+        if (!key) {
+            return res.json({error:'Missing parameter "key"'})
+        }
+    
+        await program.keyboard.sendKey(key)
         res.json({status:200})
         
     } catch (error) {
@@ -44,11 +91,15 @@ app.post('/keyboard/:key', async (req,res) => {
     }
 })
 
-app.post('/keyboard/multiple', (req,res) => {
+app.post('/keyboard/multiple', async (req,res) => {
     try {
         const keys = req.params.keys;
+        
+        if (!keys) {
+            return res.status(400).json({error:'missing parameter "keys"'})
+        }
     
-        program.keyboard.sendKeys(keys)
+        await program.keyboard.sendKeys(keys)
         res.json({status:200})
         
     } catch (error) {
@@ -57,15 +108,20 @@ app.post('/keyboard/multiple', (req,res) => {
     }
 })
 
-app.post('/write', (req,res) => {
+app.post('/write', async (req,res) => {
     try {
         const text = req.body.text;
+        const tab = req.body.tab;
 
         if (!text) {
             return res.status(400).json({error:'missing parameter "text"'})
         }
     
-        utils.writeTextTab(text)
+        if (tab) {
+            await utils.writeTextTab(program, text)
+        } else {
+            await utils.writeText(program, text)
+        }
         
         res.json({status:200})
         

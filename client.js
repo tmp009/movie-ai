@@ -15,8 +15,19 @@ module.exports = class RobotClient {
         return resp
     }
 
+    async mouseMove(x, y) {
+        await this.post('/mouse/move', {
+            x,
+            y
+        });
+    }
+
+    async mouseClick(button) {
+        await this.post('/mouse/click', {button});
+    }
+
     async keyTap(key) {
-        await this.post('/keyboard/' + key, {});
+        await this.post('/keyboard/key', {key:key});
     }
 
     async sendMultipleKeys(keys) {
@@ -24,6 +35,12 @@ module.exports = class RobotClient {
     }
 
     async writeTextTab(text) {
+        await this.post('/write', {
+            text:text, tab:true
+        });
+    }
+
+    async writeText(text) {
         await this.post('/write', {
             text:text
         });

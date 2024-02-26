@@ -1,21 +1,43 @@
 const robot = require("robotjs");
 const { execSync } = require('child_process');
 
-function copyToClipboard(text) {
+async function copyToClipboard(text) {
     execSync(`echo ${text} | clip`, { windowsHide: true });
 }
 
 
-function writeText(text) {
-    copyToClipboard(text)
-    robot.keyToggle("control", "down");
-    robot.keyTap("v");
-    robot.keyToggle("control", "up");
+async function writeText(program, text) {
+    await copyToClipboard(text)
+    await program.keyboard.sendKey(["ctrl", "v"]);
 }
 
-function writeTextTab(text) {
-    writeText(text)
-    robot.keyTap('tab')
+async function writeTextTab(program, text) {
+    await writeText(program, text)
+    await program.keyboard.sendKey('tab')
 }
 
-module.exports = { writeTextTab }
+const elementFields = [
+    "cast_members",
+    "background_actors",
+    "stunts",
+    "vehicles",
+    "props",
+    "camera",
+    "special_effects",
+    "wardrobe",
+    "makeup_or_hair",
+    "animals",
+    "music",
+    "sound",
+    "set_dressing",
+    "greenery",
+    "special_equipment",
+    "security",
+    "additonal_labor",
+    "vfx",
+    "mechanical_effects",
+    "miscellaneous",
+    "notes"
+]
+
+module.exports = { writeTextTab, writeText, elementFields }

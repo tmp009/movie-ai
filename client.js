@@ -1,6 +1,9 @@
 module.exports = class RobotClient {
-    constructor(host, port) {
-        this.host = host + ':' + port;
+    constructor(url, port) {
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'http://' + url;
+        }
+        this.host = url + ':' + port;
     }
 
     async post(route, body) {
@@ -12,7 +15,9 @@ module.exports = class RobotClient {
             body: JSON.stringify(body)
         })
 
-        return resp
+        if (!resp.ok) {
+            throw new Error(`Server returned status ${resp.status} with content: ${await resp.text()}`);
+        }
     }
 
     async mouseMove(x, y) {

@@ -1,14 +1,20 @@
-const { Hardware, getAllWindows } = require('keysender')
+const { Hardware } = require('keysender')
 const utils = require('./utils')
 const express = require('express');
 
 const app = express();
 
-const window = getAllWindows().find((window)=>{
-    return window.title.startsWith('Movie Magic Scheduling 6')
-})
+const window = utils.getWindow('Movie Magic Scheduling 6');
+let program;
 
-const program = new Hardware(null, window.className)
+try {
+    program = new Hardware(null, window.className)
+} catch (error) {
+    console.error("Error: " + error.message)
+    console.error("Is Movie Magic Scheduling 6 running?")
+
+    process.exit(1)
+}
 
 app.use(express.json())
 
@@ -29,7 +35,7 @@ app.get('/mouse/coord', async (req,res) => {
         
     } catch (error) {
         console.error(error)
-        res.json({error:error.message})
+        res.status(500).json({error:error.message})
     }
 })
 
@@ -39,11 +45,11 @@ app.post('/mouse/move', async (req,res) => {
         const yPos = Number(req.body.y);
 
         if (!xPos) {
-            return res.json({error:'Missing parameter "x"'})
+            return res.status(400).json({error:'Missing parameter "x"'})
         }
 
         if (!yPos) {
-            return res.json({error:'Missing parameter "y"'})
+            return res.status(400).json({error:'Missing parameter "y"'})
         }
 
         await program.mouse.moveTo(xPos, yPos);
@@ -52,7 +58,7 @@ app.post('/mouse/move', async (req,res) => {
         
     } catch (error) {
         console.error(error)
-        res.json({error:error.message})
+        res.status(500).json({error:error.message})
     }
 })
 
@@ -70,7 +76,7 @@ app.post('/mouse/click', async (req,res) => {
         
     } catch (error) {
         console.error(error)
-        res.json({error:error.message})
+        res.status(500).json({error:error.message})
     }
 })
 
@@ -87,7 +93,7 @@ app.post('/keyboard/key', async (req,res) => {
         
     } catch (error) {
         console.log(error)
-        res.json({error:error.message})
+        res.status(500).json({error:error.message})
     }
 })
 
@@ -104,7 +110,7 @@ app.post('/keyboard/multiple', async (req,res) => {
         
     } catch (error) {
         console.log(error)
-        res.json({error:error.message})
+        res.status(500).json({error:error.message})
     }
 })
 
@@ -128,7 +134,7 @@ app.post('/write', async (req,res) => {
     } catch (error) {
         console.log(error)
 
-        res.json({error:error.message})
+        res.status(500).json({error:error.message})
     }
 })
 
@@ -147,12 +153,12 @@ app.post('/toggle', (req,res) => {
     
         program.keyboard.toggleKey(key, state, 50);
         
-        res.json({status:200})
+        res.status(500).json({status:200})
         
     } catch (error) {
         console.log(error)
 
-        res.json({error:error.message})
+        res.status(500).status(500).json({error:error.message})
     }
 })
 

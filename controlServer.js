@@ -1,7 +1,12 @@
-const { Hardware } = require('keysender')
-const utils = require('./utils')
-const express = require('express');
+require('dotenv').config();
 
+const { Hardware, Virtual } = require('keysender');
+const utils = require('./utils');
+const express = require('express');
+const { exec } = require('child_process');
+
+
+const port = process.env.PORT || 3000;
 const app = express();
 
 const window = utils.getWindow('Movie Magic Scheduling 6');
@@ -9,18 +14,53 @@ let program;
 
 try {
     program = new Hardware(null, window.className)
+    program.workwindow.refresh();
 } catch (error) {
-    console.error("Error: " + error.message)
-    console.error("Is Movie Magic Scheduling 6 running?")
+    console.error("[Error] " + error.message)
+    console.error("[*] Is Movie Magic Scheduling 6 running?")
 
     process.exit(1)
 }
 
 app.use(express.json())
 
+app.post('/process', (req,res)=>{
+    try {
+        if (!req.body.name) {
+            return res.status(400).json({error:'Missing parameter "name"'})
+        }
+        const wnd =  utils.getWindow(req.body.name)
+        return res.json({process: wnd})
+    } catch (error) {
+        res.status(500).json({error:error.message})
+    }
+})
+
+app.post('/dialog/acceptElements', async (req,res)=>{
+    try {
+        const wnd =  utils.getWindow('Unknown Element Name')
+        if (wnd) {
+            const handle = new Virtual(null,wnd.className);
+            await handle.keyboard.sendKeys(['left', 'enter'])
+        }
+        res.json({status:200})
+
+    } catch (error) {
+        res.status(500).json({error:error.message})
+    }
+})
+
+
 app.get('/stop', (req,res)=>{
     res.json({status:200})
     process.exit(0)
+})
+
+app.post('/restart', (req,res)=>{
+    program.workwindow.close();
+    exec('"C:\Program Files (x86)\Movie Magic\MM Scheduling\MM Scheduling.exe" "data\Default_Template.mst"')
+    program.workwindow.refresh();
+    res.json({status:200})
 })
 
 app.post('/set/foreground', (req,res)=>{
@@ -162,4 +202,4 @@ app.post('/toggle', (req,res) => {
     }
 })
 
-app.listen(3000, '0.0.0.0', () => console.log('http://0.0.0.0:3000/'))
+app.listen(port, '0.0.0.0', () => console.log(`http://0.0.0.0:${port}/`))

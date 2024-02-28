@@ -2,10 +2,10 @@ const { execSync } = require('child_process');
 const { getAllWindows } = require('keysender')
 
 async function copyToClipboard(text) {
-    execSync(`echo ${text} | clip`, { windowsHide: true });
+    execSync(`echo|set /p=${text}| clip`, { windowsHide: true });
 }
 
-async function getWindow(name) {
+function getWindow(name) {
     const window = getAllWindows().find((window)=>{
         return window.title.startsWith(name)
     })

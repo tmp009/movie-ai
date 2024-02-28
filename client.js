@@ -18,6 +18,16 @@ module.exports = class RobotClient {
         if (!resp.ok) {
             throw new Error(`Server returned status ${resp.status} with content: ${await resp.text()}`);
         }
+
+        return resp
+    }
+
+    async getProcess(name) {
+        return await (await this.post('/process', {name})).json();
+    }
+
+    async handleElementDialog() {
+        await this.post('/dialog/acceptElements',{})
     }
 
     async mouseMove(x, y) {

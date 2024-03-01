@@ -31,7 +31,7 @@ const elementFields = [
     "greenery",
     "special_equipment",
     "security",
-    "additonal_labor",
+    "additional_labor",
     "vfx",
     "mechanical_effects",
     "miscellaneous",
@@ -53,6 +53,9 @@ async function main() {
         return
     }
 
+    // console.log("[info]: starting a empty project from template")
+    // await client.restart();
+
     for (let i = 0; i < 5; i++) {
         console.log(`Starting: ${5-i}`)
         await new Promise(r => setTimeout(r, 1000));
@@ -63,6 +66,8 @@ async function main() {
     await client.mouseClick('left')
 
     for (const scene of jsonData.scenes) {
+        console.info("[info]: starting scene " + scene.scene_number);
+
         // row 1
         await client.writeTextTab(scene.scene_number)
 
@@ -130,73 +135,94 @@ async function main() {
         await client.keyTap('tab');
         await client.keyTap('tab');
         await client.keyTap('tab');
-
-        const  xBase  = 39;
-        const  yBase  = 385;
-
-        // adding items affect allignment 
-        let xExt = 0; 
-        let yExt = 0; 
-        let overflow = 0
     
         // Elements
         for (const [index, element] of elementFields.entries()) {
             const targetElement  = scene?.elements[element];
+
     
             if (typeof targetElement === "undefined") {
                 console.info("[info]: skipping field " + element);
                 continue;
             }
 
-            console.info("[info]: field " + element + " has " + targetElement.length + " items");
-    
-            for (const value of targetElement) {
-                const xCoord = xBase + xExt;
-                const yCoord = yBase + 16.2 * (index - overflow)  + (16.2 * yExt); // take added items into account
+            console.info("[info]: field", element, "with index", index, "has item count:", targetElement.length);
+            
+            await client.keyTap(['ctrl', 'e']); // open element creator
+            
+            await client.mouseMove(218, 155); // category button
+            await client.mouseClick('left'); 
+            await client.mouseMove(218, 162); // all category
+            await client.mouseClick('left');
 
-                await client.mouseMove(xCoord, yCoord);
-                await client.mouseClick('left'); 
+            await client.mouseMove(218, 155); // category button
+            await client.mouseClick('left'); 
+
+            switch (element) {
+                case "cast_members":
+                    await client.keyTap("cast".split(''));
+
+                    break
+                case "background_actors":
+                    await client.keyTap("back".split(''));
+                    break
                 
-                switch (element) {
-                    case "cast_members":
-                    case "background_actors":
-                        if (value?.age != '' || typeof value?.age != 'undefined' ) {
-                            await client.writeText(`${value?.name} (${value?.age})`);
-                        } else {
-                            await client.writeText(`${value?.name}`)
-                        }
-                        break;
-                
-                    default:
-                        await client.writeText(value)
-                        break;
+                case "special_equipment":
+                    await client.sendMultipleKeys("special".split('').concat(['space', 'e', 'q']))
+                    break
+
+                case "vfx":
+                    await client.sendMultipleKeys("vis".split(''))
+                    break
+                default:
+                    await client.keyTap(element.split('_')[0].split(''))
+            }
+
+            for (let value of targetElement) {
+                console.info("[info]: inserting", value, "into", element);
+
+                await client.mouseMove(236, 130); // element textbox
+                await client.mouseClick('left', true); 
+                await client.keyTap(['ctrl', 'a']);
+                await client.keyTap(['ctrl', 'backspace']);
+
+                if (element == 'cast_members' || element == 'background_actors') {
+
+                    if (String(value?.age) != 'undefined' &&  String(value?.age).length > 0) {
+                        value = `${value?.name} (${value?.age})`;
+                        
+                    } else {
+                        value = `${value?.name}`
+                    }
                 }
-                await client.keyTap('enter');
 
-                // const addDialog = await client.getProcess('Unknown Element Name');
+                await client.writeText(value);
 
-                // if (addDialog.process) {
-                //     console.info('[info]: handling dialog')
-                //     await new Promise(r => setTimeout(r, 500))
-                //     await client.keyTap('enter');      
-                // }
+                await client.mouseMove(502, 127); // new button
+                await client.mouseClick('left');
 
-                await client.handleElementDialog();
+                await new Promise(r => setTimeout(r, 200))
+
+                if ((await client.getProcess('Element Quick Entry')).process) {
+                    await client.keyTap('enter')
+
+                    await client.mouseMove(502, 158); // find button
+                    await client.mouseClick('left');
+
+                    await client.mouseMove(249, 264); // element
+                    await client.mouseClick('left');
+
+                    await client.mouseMove(499, 198); // insert element
+                    await client.mouseClick('left');
+                }
+
+                console.info("[info]: inserted", value, "into", element);
+
             }
-            yExt += targetElement.length;
 
-            if (yExt > 759) { // handle overflow
-                console.info('[info]: resetting yExt and increasing xExt')
-                xExt += 200;
-                yExt = 0;
-                overflow = index;
-            }
+            await client.mouseMove(501, 287); // close button
+            await client.mouseClick('left'); 
         }
-
-        // reset values for next scene
-        console.info('[info]: resetting x,y ext')
-        xExt = 0; 
-        yExt = 0; 
 
         // escape elements field
         console.info('[info]: starting new scene')

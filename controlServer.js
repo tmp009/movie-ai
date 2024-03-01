@@ -8,7 +8,6 @@ const { exec } = require('child_process');
 
 const port = process.env.PORT || 3000;
 const app = express();
-
 const window = utils.getWindow('Movie Magic Scheduling 6');
 let program;
 
@@ -36,13 +35,24 @@ app.post('/process', (req,res)=>{
     }
 })
 
+app.get('/windowSize', (req,res)=>{
+    try {
+        const view = program.workwindow.getView();
+        return res.json({view:view})
+    } catch (error) {
+        res.status(500).json({error:error.message})
+    }
+})
+
 app.post('/dialog/acceptElements', async (req,res)=>{
     try {
         const wnd =  utils.getWindow('Unknown Element Name')
         if (wnd) {
             const handle = new Virtual(null,wnd.className);
-            await handle.keyboard.sendKeys(['left', 'enter'])
+            await handle.keyboard.sendKeys(['left', 'enter'], 300)
         }
+        await program.mouse.moveTo(program.mouse.getPos().x - 12, program.mouse.getPos().y)
+        await program.keyboard.sendKey('escape')
         res.json({status:200})
 
     } catch (error) {
@@ -57,10 +67,17 @@ app.get('/stop', (req,res)=>{
 })
 
 app.post('/restart', (req,res)=>{
-    program.workwindow.close();
-    exec('"C:\Program Files (x86)\Movie Magic\MM Scheduling\MM Scheduling.exe" "data\Default_Template.mst"')
-    program.workwindow.refresh();
-    res.json({status:200})
+    program.workwindow.kill();
+    exec('"C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe" "data\\Default_Template.mst"')
+
+    const intervalId = setInterval(() => {
+        if (program.workwindow.isOpen() && utils.getWindow('Movie Magic Scheduling 6 - untitled')) {
+            clearInterval(intervalId);
+            res.json({ status: 200 });
+        } else {
+            program.workwindow.refresh();
+        }
+    }, 1000); 
 })
 
 app.post('/set/foreground', (req,res)=>{
@@ -105,12 +122,19 @@ app.post('/mouse/move', async (req,res) => {
 app.post('/mouse/click', async (req,res) => {
     try {
         const button = req.body.button;
+        const dbclick = req.body.double;
 
         if (!button) {
             return res.json({error:'Missing parameter "button"'})
         }
 
-        await program.mouse.click(button);
+        if (dbclick) {
+            await program.mouse.click(button);
+            await program.mouse.click(button);
+        } else {
+            await program.mouse.click(button);
+        }
+
         
         res.json({status:200})
         
@@ -139,7 +163,7 @@ app.post('/keyboard/key', async (req,res) => {
 
 app.post('/keyboard/multiple', async (req,res) => {
     try {
-        const keys = req.params.keys;
+        const keys = req.body.keys;
         
         if (!keys) {
             return res.status(400).json({error:'missing parameter "keys"'})

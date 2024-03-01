@@ -6,7 +6,7 @@ module.exports = class RobotClient {
         this.host = url + ':' + port;
     }
 
-    async post(route, body) {
+    async post(route, body, delay=0) {
         const resp = await fetch(this.host+route, {
             method:"POST",
             headers: {
@@ -19,11 +19,38 @@ module.exports = class RobotClient {
             throw new Error(`Server returned status ${resp.status} with content: ${await resp.text()}`);
         }
 
+        if (delay){
+            await new Promise(r => setTimeout(r, delay));
+        }
+
         return resp
+    }
+
+    async get(route) {
+        const resp = await fetch(this.host+route, {
+            method:"GET",
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+
+        if (!resp.ok) {
+            throw new Error(`Server returned status ${resp.status} with content: ${await resp.text()}`);
+        }
+
+        return resp
+    }
+
+    async restart() {
+        await this.post('/restart',{})
     }
 
     async getProcess(name) {
         return await (await this.post('/process', {name})).json();
+    }
+
+    async getWindowSize() {
+        return await (await this.get('/windowSize')).json();
     }
 
     async handleElementDialog() {
@@ -34,11 +61,11 @@ module.exports = class RobotClient {
         await this.post('/mouse/move', {
             x,
             y
-        });
+        }, 200);
     }
 
-    async mouseClick(button) {
-        await this.post('/mouse/click', {button});
+    async mouseClick(button, double=false) {
+        await this.post('/mouse/click', {button, double}, 100);
     }
 
     async keyTap(key) {

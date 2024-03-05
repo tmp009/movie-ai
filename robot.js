@@ -3,7 +3,7 @@ require('dotenv').config();
 const fs = require('fs/promises');
 const { exit } = require('process');
 
-const RobotClient = require('./client');
+const RobotClient = require('./lib/client');
 if (process.argv.length < 5) {
     console.log(`Usage: node robot.js <hostname> <port> <script.json>`)
     console.log('Make sure Movie Magic Scheduling 6 is open with Default_Template.mst on the target machine.')
@@ -42,6 +42,10 @@ const elementFields = [
 async function main() { 
     const inputFile =  process.argv[4];
     const data = await fs.readFile(inputFile, {encoding: 'utf-8'});
+    const cache = {
+        cast_members: [],
+        background_actors: []
+    }
     let jsonData;
 
     try {
@@ -64,8 +68,9 @@ async function main() {
     await client.setForeground();
     await client.mouseMove(90, 204);
     await client.mouseClick('left')
+    let f = []
 
-    for (const scene of jsonData.scenes) {
+    for (const [sceneIndex, scene] of jsonData.scenes.entries()) {
         console.info("[info]: starting scene " + scene.scene_number);
 
         // row 1
@@ -73,14 +78,11 @@ async function main() {
 
 
         if (scene.set.type.length > 1)  { // INT/EXT
-            await client.keyTap('down');
-            await client.keyTap('down');
-            await client.keyTap('down');
+            await client.sendMultipleKeys(['down', 'down', 'down'])
         } else if (scene.set.type[0].toUpperCase() == 'INT') {
             await client.keyTap('down');
         } else if (scene.set.type[0].toUpperCase() == 'EXT') {
-            await client.keyTap('down');
-            await client.keyTap('down');
+            await client.sendMultipleKeys(['down', 'down'])
         }
 
         await client.keyTap('tab');
@@ -94,47 +96,33 @@ async function main() {
 
             
             case 'NIGHT':
-                await client.keyTap('down');
-                await client.keyTap('down');
+                await client.sendMultipleKeys(['down', 'down'])
                 break;
 
             case 'MORNING':
-                await client.keyTap('down');
-                await client.keyTap('down');
-                await client.keyTap('down');
+                await client.sendMultipleKeys(['down', 'down', 'down'])
                 break;
             
             case 'EVENING':
-                await client.keyTap('down');
-                await client.keyTap('down');
-                await client.keyTap('down');
-                await client.keyTap('down');
+                await client.sendMultipleKeys(['down', 'down', 'down', 'down'])
                 break;
         
             default:
                 break;
         }
 
-        await client.keyTap('tab');
-        await client.keyTap('tab');
-        await client.keyTap('tab');
-
+        await client.sendMultipleKeys(['tab', 'tab', 'tab'])
+        
 
         // row 2
         await client.writeTextTab(scene.synopsis)
 
         // row 3
-        await client.keyTap('tab');
-        await client.keyTap('tab');
-        await client.keyTap('tab');
-        await client.keyTap('tab');
+        await client.sendMultipleKeys(['tab', 'tab', 'tab', 'tab'])
 
         
         // row 4
         await client.writeTextTab(scene.location)
-        await client.keyTap('tab');
-        await client.keyTap('tab');
-        await client.keyTap('tab');
     
         // Elements
         for (const [index, element] of elementFields.entries()) {
@@ -179,6 +167,11 @@ async function main() {
             }
 
             for (let value of targetElement) {
+                let skipCreate = false;
+
+                if (typeof value == 'string' && value == "") {
+                    continue
+                }
                 console.info("[info]: inserting", value, "into", element);
 
                 await client.mouseMove(236, 130); // element textbox
@@ -194,18 +187,35 @@ async function main() {
                     } else {
                         value = `${value?.name}`
                     }
+
+                    if (cache[element].includes(value)) {
+                        skipCreate = true;
+                    } else {
+                        cache[element].push(value);
+                    }
                 }
 
                 await client.writeText(value);
 
-                await client.mouseMove(502, 127); // new button
-                await client.mouseClick('left');
-
-                await new Promise(r => setTimeout(r, 200))
-
-                if ((await client.getProcess('Element Quick Entry')).process) {
-                    await client.keyTap('enter')
-
+                if (!skipCreate) {
+                    await client.mouseMove(502, 127); // new button
+                    await client.mouseClick('left');
+    
+                    await new Promise(r => setTimeout(r, 200))
+    
+                    if ((await client.getProcess('Element Quick Entry')).process) {
+                        await client.keyTap('enter')
+    
+                        await client.mouseMove(502, 158); // find button
+                        await client.mouseClick('left');
+    
+                        await client.mouseMove(249, 264); // element
+                        await client.mouseClick('left');
+    
+                        await client.mouseMove(499, 198); // insert element
+                        await client.mouseClick('left');
+                    }
+                } else {
                     await client.mouseMove(502, 158); // find button
                     await client.mouseClick('left');
 
@@ -215,6 +225,7 @@ async function main() {
                     await client.mouseMove(499, 198); // insert element
                     await client.mouseClick('left');
                 }
+
 
                 console.info("[info]: inserted", value, "into", element);
 
@@ -231,6 +242,13 @@ async function main() {
         
         // Change scene
         await client.keyTap(["ctrl", "right"]);
+
+        // save changes
+        if (sceneIndex % 5 == 0) {
+            await client.keyTap(["ctrl", "s"]);
+            await new Promise(r => setTimeout(r, 2000))
+        }
+
     }
 
 

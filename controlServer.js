@@ -1,9 +1,10 @@
 require('dotenv').config();
 
-const { Hardware, Virtual } = require('keysender');
-const utils = require('./utils');
+const { Hardware } = require('keysender');
+const utils = require('./lib/utils');
 const express = require('express');
 const { exec } = require('child_process');
+const fs = require('fs/promises')
 
 
 const port = process.env.PORT || 3000;
@@ -22,6 +23,16 @@ try {
 }
 
 app.use(express.json())
+// app.use(async (req,res,next)=>{
+//     if (utils.getWindow('Auto Save')) {
+//         const orignalPosition = program.mouse.getPos();
+//         program.mouse.moveTo(1003, 455)
+//         await program.mouse.click('left')
+//         program.mouse.moveTo(orignalPosition.x, orignalPosition.y);
+
+//     }
+//     next();
+// })
 
 app.post('/process', (req,res)=>{
     try {
@@ -35,43 +46,19 @@ app.post('/process', (req,res)=>{
     }
 })
 
-app.get('/windowSize', (req,res)=>{
-    try {
-        const view = program.workwindow.getView();
-        return res.json({view:view})
-    } catch (error) {
-        res.status(500).json({error:error.message})
-    }
-})
-
-app.post('/dialog/acceptElements', async (req,res)=>{
-    try {
-        const wnd =  utils.getWindow('Unknown Element Name')
-        if (wnd) {
-            const handle = new Virtual(null,wnd.className);
-            await handle.keyboard.sendKeys(['left', 'enter'], 300)
-        }
-        await program.mouse.moveTo(program.mouse.getPos().x - 12, program.mouse.getPos().y)
-        await program.keyboard.sendKey('escape')
-        res.json({status:200})
-
-    } catch (error) {
-        res.status(500).json({error:error.message})
-    }
-})
-
-
 app.get('/stop', (req,res)=>{
     res.json({status:200})
     process.exit(0)
 })
 
-app.post('/restart', (req,res)=>{
+app.post('/restart', async (req,res)=>{
     program.workwindow.kill();
-    exec('"C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe" "data\\Default_Template.mst"')
+    const data = await fs.readFile('data\\default.msd')
+    await fs.writeFile('data\\default_tmp.msd', data);
+    exec('"C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe" "data\\default_tmp.msd"')
 
     const intervalId = setInterval(() => {
-        if (program.workwindow.isOpen() && utils.getWindow('Movie Magic Scheduling 6 - untitled')) {
+        if (program.workwindow.isOpen() && utils.getWindow('Movie Magic Scheduling 6 - default_tmp')) {
             clearInterval(intervalId);
             res.json({ status: 200 });
         } else {

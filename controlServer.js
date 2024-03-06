@@ -5,8 +5,6 @@ const utils = require('./lib/utils');
 const express = require('express');
 const { exec } = require('child_process');
 const fs = require('fs/promises');
-const os = require('os');
-
 
 const port = process.env.PORT || 3000;
 const app = express();
@@ -97,11 +95,7 @@ app.post('/mouse/move', async (req,res) => {
             return res.status(400).json({error:'Missing parameter "y"'})
         }
 
-        if (os.release().startsWith('10')) {
-            await program.mouse.moveTo(xPos, yPos-38);
-        } else {
-            await program.mouse.moveTo(xPos, yPos);
-        }
+        await program.mouse.moveTo(xPos, yPos);
     
         res.json({status:200})
         

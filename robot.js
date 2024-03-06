@@ -1,6 +1,7 @@
 require('dotenv').config();
 
-const elementBox = require('./elements.json');
+
+
 const fs = require('fs/promises');
 const { exit } = require('process');
 
@@ -10,6 +11,8 @@ if (process.argv.length < 5) {
     console.log('Make sure Movie Magic Scheduling 6 is open with Default_Template.mst on the target machine.')
     exit(0)
 }
+
+const {elementBox, parentWindow} = require('./elements.json');
 
 const hostname = process.argv[2];
 const port = process.argv[3];
@@ -68,9 +71,8 @@ async function main() {
     }
 
     await client.setForeground();
-    await client.mouseMove(90, 204);
+    await client.mouseMove(parentWindow.sceneNumber.x, parentWindow.sceneNumber.y); // scene number textbox
     await client.mouseClick('left')
-    let f = []
 
     for (const [sceneIndex, scene] of jsonData.scenes.entries()) {
         console.info("[info]: starting scene " + scene.scene_number);
@@ -239,7 +241,7 @@ async function main() {
 
         // escape elements field
         console.info('[info]: starting new scene')
-        await client.mouseMove(90, 204);
+        await client.mouseMove(parentWindow.sceneNumber.x, parentWindow.sceneNumber.y);
         await client.mouseClick('left')
         
         // Change scene

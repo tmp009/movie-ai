@@ -4,12 +4,13 @@ const { Hardware } = require('keysender');
 const utils = require('./lib/utils');
 const express = require('express');
 const { exec } = require('child_process');
-const fs = require('fs/promises')
+const fs = require('fs/promises');
+const os = require('os');
 
 
 const port = process.env.PORT || 3000;
 const app = express();
-const MMSPATH = process.env.MMS_PATH || "C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe"
+const MMSPATH = process.env.MMS_PATH || "C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe";
 console.log(MMSPATH)
 const window = utils.getWindow('Movie Magic Scheduling 6');
 let program;
@@ -96,7 +97,11 @@ app.post('/mouse/move', async (req,res) => {
             return res.status(400).json({error:'Missing parameter "y"'})
         }
 
-        await program.mouse.moveTo(xPos, yPos);
+        if (os.release().startsWith('10')) {
+            await program.mouse.moveTo(xPos, yPos-38);
+        } else {
+            await program.mouse.moveTo(xPos, yPos);
+        }
     
         res.json({status:200})
         

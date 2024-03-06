@@ -9,6 +9,8 @@ const fs = require('fs/promises')
 
 const port = process.env.PORT || 3000;
 const app = express();
+const MMSPATH = process.env.MMS_PATH || "C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe"
+console.log(MMSPATH)
 const window = utils.getWindow('Movie Magic Scheduling 6');
 let program;
 
@@ -50,7 +52,7 @@ app.post('/restart', async (req,res)=>{
     if (utils.checkFileReadable(templateTmp)) {
         const data = await fs.readFile(template);
         await fs.writeFile(templateTmp, data);
-        exec('"C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe" "data\\default_tmp.msd"')
+        exec(`"${MMSPATH}" "data\\default_tmp.msd"`)
         
         const intervalId = setInterval(() => {
             if (program.workwindow.isOpen() && utils.getWindow('Movie Magic Scheduling 6 - default_tmp')) {

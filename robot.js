@@ -1,22 +1,31 @@
 require('dotenv').config();
 
-
-
 const fs = require('fs/promises');
 const { exit } = require('process');
 
 const RobotClient = require('./lib/client');
 if (process.argv.length < 5) {
-    console.log(`Usage: node robot.js <hostname> <port> <script.json>`)
+    console.log(`Usage: node robot.js <hostname> <port> <script.json> [winVer]`)
     console.log('Make sure Movie Magic Scheduling 6 is open with Default_Template.mst on the target machine.')
     exit(0)
 }
 
-const {elementBox, parentWindow} = require('./elements.json');
-
 const hostname = process.argv[2];
 const port = process.argv[3];
+const elementsJson = process.argv[5];
 const client = new RobotClient(hostname,port);
+let elementBox;
+let parentWindow;
+
+if (elementsJson == "10") {
+    const elementsCoord = require('./elements_win10.json');
+    elementBox=elementsCoord.elementBox;
+    parentWindow=elementsCoord.parentWindow;
+} else {
+    const elementsCoord = require('./elements.json');
+    elementBox=elementsCoord.elementBox;
+    parentWindow=elementsCoord.parentWindow;
+}
 
 const elementFields = [
     "cast_members",

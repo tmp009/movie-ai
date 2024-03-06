@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const elementBox = require('./elements.json');
 const fs = require('fs/promises');
 const { exit } = require('process');
 
@@ -50,6 +51,7 @@ async function main() {
 
     try {
         jsonData = JSON.parse(data);
+        console.log('[info]: the script has', jsonData.scenes.length, "scenes.")
     } catch (error) {
         console.error('Failed to parse JSON data!');
         console.error(error.message);
@@ -57,8 +59,8 @@ async function main() {
         return
     }
 
-    // console.log("[info]: starting a empty project from template")
-    // await client.restart();
+    console.log("[info]: starting a empty project from template")
+    await client.restart();
 
     for (let i = 0; i < 5; i++) {
         console.log(`Starting: ${5-i}`)
@@ -138,12 +140,12 @@ async function main() {
             
             await client.keyTap(['ctrl', 'e']); // open element creator
             
-            await client.mouseMove(218, 155); // category button
+            await client.mouseMove(elementBox.category.x, elementBox.category.y); // category button
             await client.mouseClick('left'); 
-            await client.mouseMove(218, 162); // all category
+            await client.mouseMove(elementBox.categoryTop.x, elementBox.categoryTop.y); // all category
             await client.mouseClick('left');
 
-            await client.mouseMove(218, 155); // category button
+            await client.mouseMove(elementBox.category.x, elementBox.category.y); // category button
             await client.mouseClick('left'); 
 
             switch (element) {
@@ -174,7 +176,7 @@ async function main() {
                 }
                 console.info("[info]: inserting", value, "into", element);
 
-                await client.mouseMove(236, 130); // element textbox
+                await client.mouseMove(elementBox.element.x, elementBox.element.y); // element textbox
                 await client.mouseClick('left', true); 
                 await client.keyTap(['ctrl', 'a']);
                 await client.keyTap(['ctrl', 'backspace']);
@@ -198,7 +200,7 @@ async function main() {
                 await client.writeText(value);
 
                 if (!skipCreate) {
-                    await client.mouseMove(502, 127); // new button
+                    await client.mouseMove(elementBox.new.x, elementBox.new.y); // new button
                     await client.mouseClick('left');
     
                     await new Promise(r => setTimeout(r, 200))
@@ -206,23 +208,23 @@ async function main() {
                     if ((await client.getProcess('Element Quick Entry')).process) {
                         await client.keyTap('enter')
     
-                        await client.mouseMove(502, 158); // find button
+                        await client.mouseMove(elementBox.find.x, elementBox.find.y); // find button
                         await client.mouseClick('left');
     
-                        await client.mouseMove(249, 264); // element
+                        await client.mouseMove(elementBox.item.x, elementBox.item.y); // element
                         await client.mouseClick('left');
     
-                        await client.mouseMove(499, 198); // insert element
+                        await client.mouseMove(elementBox.insert.x, elementBox.insert.y); // insert element
                         await client.mouseClick('left');
                     }
                 } else {
-                    await client.mouseMove(502, 158); // find button
+                    await client.mouseMove(elementBox.find.x, elementBox.find.y); // find button
                     await client.mouseClick('left');
 
-                    await client.mouseMove(249, 264); // element
+                    await client.mouseMove(elementBox.item.x, elementBox.item.y); // element
                     await client.mouseClick('left');
 
-                    await client.mouseMove(499, 198); // insert element
+                    await client.mouseMove(elementBox.insert.x, elementBox.insert.y); // insert element
                     await client.mouseClick('left');
                 }
 
@@ -231,7 +233,7 @@ async function main() {
 
             }
 
-            await client.mouseMove(501, 287); // close button
+            await client.mouseMove(elementBox.close.x, elementBox.close.y); // close button
             await client.mouseClick('left'); 
         }
 

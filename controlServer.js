@@ -23,16 +23,6 @@ try {
 }
 
 app.use(express.json())
-// app.use(async (req,res,next)=>{
-//     if (utils.getWindow('Auto Save')) {
-//         const orignalPosition = program.mouse.getPos();
-//         program.mouse.moveTo(1003, 455)
-//         await program.mouse.click('left')
-//         program.mouse.moveTo(orignalPosition.x, orignalPosition.y);
-
-//     }
-//     next();
-// })
 
 app.post('/process', (req,res)=>{
     try {
@@ -46,25 +36,33 @@ app.post('/process', (req,res)=>{
     }
 })
 
-app.get('/stop', (req,res)=>{
+app.post('/stop', (req,res)=>{
     res.json({status:200})
     process.exit(0)
 })
 
 app.post('/restart', async (req,res)=>{
+    const template = "data\\default.msd";
+    const templateTmp = "data\\default_tmp.msd";
     program.workwindow.kill();
-    const data = await fs.readFile('data\\default.msd')
-    await fs.writeFile('data\\default_tmp.msd', data);
-    exec('"C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe" "data\\default_tmp.msd"')
 
-    const intervalId = setInterval(() => {
-        if (program.workwindow.isOpen() && utils.getWindow('Movie Magic Scheduling 6 - default_tmp')) {
-            clearInterval(intervalId);
-            res.json({ status: 200 });
-        } else {
-            program.workwindow.refresh();
-        }
-    }, 1000); 
+    
+    if (utils.checkFileReadable(templateTmp)) {
+        const data = await fs.readFile(template);
+        await fs.writeFile(templateTmp, data);
+        exec('"C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe" "data\\default_tmp.msd"')
+        
+        const intervalId = setInterval(() => {
+            if (program.workwindow.isOpen() && utils.getWindow('Movie Magic Scheduling 6 - default_tmp')) {
+                clearInterval(intervalId);
+                res.json({ status: 200 });
+            } else {
+                program.workwindow.refresh();
+            }
+        }, 1000); 
+    }
+
+
 })
 
 app.post('/set/foreground', (req,res)=>{

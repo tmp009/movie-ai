@@ -4,16 +4,18 @@ const fs = require('fs/promises');
 const { exit } = require('process');
 
 const RobotClient = require('./lib/client');
-if (process.argv.length < 5) {
-    console.log(`Usage: node robot.js <hostname> <port> <script.json> [winVer]`)
+if (process.argv.length < 6) {
+    console.log(`Usage: node robot.js <hostname> <port> <script.json> <output> [winVer]`)
     console.log('Make sure Movie Magic Scheduling 6 is open with Default_Template.mst on the target machine.')
     exit(0)
 }
 
 const hostname = process.argv[2];
 const port = process.argv[3];
-const elementsJson = process.argv[5];
+const output = process.argv[5];
+const elementsJson = process.argv[6];
 const client = new RobotClient(hostname,port);
+
 let elementBox;
 let parentWindow;
 
@@ -55,10 +57,7 @@ const elementFields = [
 async function main() { 
     const inputFile =  process.argv[4];
     const data = await fs.readFile(inputFile, {encoding: 'utf-8'});
-    const cache = {
-        cast_members: [],
-        background_actors: []
-    }
+    const cache = { cast_members: [], background_actors: [] } // avoid trying to recreate the elements 
     let jsonData;
 
     try {
@@ -141,7 +140,6 @@ async function main() {
         for (const [index, element] of elementFields.entries()) {
             const targetElement  = scene?.elements[element];
 
-    
             if (typeof targetElement === "undefined") {
                 console.info("[info]: skipping field " + element);
                 continue;
@@ -259,13 +257,22 @@ async function main() {
         // save changes
         if (sceneIndex % 5 == 0) {
             await client.keyTap(["ctrl", "s"]);
-            await new Promise(r => setTimeout(r, 2000))
+            await new Promise(r => setTimeout(r, 2500))
         }
 
     }
 
+    await client.keyTap(["ctrl", "s"]);
+    await new Promise(r => setTimeout(r, 2500))
 
-    console.log('Finished automation')
+    console.log('Saving file to', output)
+    
+    const file = await client.retrieve();
+    const fileblob = await file.blob();
+
+    await fs.writeFile(output, Buffer.from(await fileblob.arrayBuffer()), {'encoding':'binary'});
+
+    console.log('Finished automation!')
 }
 
 main();

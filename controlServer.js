@@ -5,6 +5,7 @@ const utils = require('./lib/utils');
 const express = require('express');
 const { exec } = require('child_process');
 const fs = require('fs/promises');
+const path = require('path');
 
 const port = process.env.PORT || 3000;
 const app = express();
@@ -40,6 +41,18 @@ app.post('/process', (req,res)=>{
 app.post('/stop', (req,res)=>{
     res.json({status:200})
     process.exit(0)
+})
+
+app.get('/retrieve', async (req,res)=>{
+    if (program.workwindow.isOpen()) {
+        program.workwindow.kill()
+        await new Promise(r => setTimeout(r, 3000))
+    }
+    res.sendFile(path.join(__dirname, "data", "default_tmp.msd"), {
+        headers: {
+            'Content-Disposition': `attachment; filename="current.msd"`
+        }
+    });
 })
 
 app.post('/restart', async (req,res)=>{

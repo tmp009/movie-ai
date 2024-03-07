@@ -46,11 +46,13 @@ app.post('/restart', async (req,res)=>{
     const template = "data\\default.msd";
     const templateTmp = "data\\default_tmp.msd";
     program.workwindow.kill();
-
     
-    if (utils.checkFileReadable(templateTmp)) {
+    try {
         const data = await fs.readFile(template);
+
+        await new Promise(r => setTimeout(r, 3000))
         await fs.writeFile(templateTmp, data);
+        
         exec(`"${MMSPATH}" "data\\default_tmp.msd"`)
         
         const intervalId = setInterval(() => {
@@ -61,9 +63,10 @@ app.post('/restart', async (req,res)=>{
                 program.workwindow.refresh();
             }
         }, 1000); 
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({error:error.message})
     }
-
-
 })
 
 app.post('/set/foreground', (req,res)=>{

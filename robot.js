@@ -1,25 +1,61 @@
 require('dotenv').config();
 
 const fs = require('fs/promises');
-const { exit } = require('process');
-
 const RobotClient = require('./lib/client');
-if (process.argv.length < 6) {
-    console.log(`Usage: node robot.js <hostname> <port> <script.json> <output> [winVer]`)
-    console.log('Make sure Movie Magic Scheduling 6 is open with Default_Template.mst on the target machine.')
-    exit(0)
-}
 
-const hostname = process.argv[2];
-const port = process.argv[3];
-const output = process.argv[5];
-const elementsJson = process.argv[6];
+const yargs = require('yargs');
+
+// Define the command-line options
+const argv = yargs
+    .options({
+        'win-10': {
+            alias: 'w',
+            describe: 'Use windows 10 coordinates',
+            type: "boolean"
+        },
+        'host': {
+            alias: 'H',
+            describe: 'the target machine running the control server.',
+            type: 'string',
+            default: "0.0.0.0",
+        },
+        'port': {
+            alias: 'p',
+            describe: 'the port the server is listening to.',
+            type: 'number',
+            default: 3000,
+            demandOption: true
+        },
+        'output': {
+            alias: 'o',
+            describe: 'the target machine running the control server.',
+            type: 'string',
+            default: "output.msd",
+        }
+})
+.showHelpOnFail(true, 'Error: Missing positional argument. Please provide a positional argument.\nMake sure Movie Magic Scheduling 6 is open with Default_Template.mst on the target machine.\n') 
+.demandCommand(1)
+.strict()
+.alias('h', 'help')
+.check((argv) => {
+    if (isNaN(argv.port)) {
+        throw new Error('Error: Invalid value for "port". Please provide a valid number.');
+    }
+    return true;
+})
+.argv;
+
+const args = argv._;
+
+const hostname = argv.host;
+const port = argv.port;
+const output = argv.output;
 const client = new RobotClient(hostname,port);
 
 let elementBox;
 let parentWindow;
 
-if (elementsJson == "10") {
+if (argv['win-10']) {
     const elementsCoord = require('./elements_win10.json');
     elementBox=elementsCoord.elementBox;
     parentWindow=elementsCoord.parentWindow;
@@ -55,7 +91,7 @@ const elementFields = [
 
 
 async function main() { 
-    const inputFile =  process.argv[4];
+    const inputFile =  args[0];
     const data = await fs.readFile(inputFile, {encoding: 'utf-8'});
     const cache = { cast_members: [], background_actors: [] } // avoid trying to recreate the elements 
     let jsonData;

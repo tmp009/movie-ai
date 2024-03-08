@@ -35,7 +35,7 @@ const argv = yargs
 })
 .showHelpOnFail(true, 'Error: Missing positional argument. Please provide a positional argument.\nMake sure Movie Magic Scheduling 6 is open with Default_Template.mst on the target machine.\n') 
 .demandCommand(1)
-.strict()
+.usage('Usage: $0 [options] <script>')
 .alias('h', 'help')
 .check((argv) => {
     if (isNaN(argv.port)) {
@@ -111,10 +111,10 @@ async function main() {
 
     for (let i = 0; i < 5; i++) {
         console.log(`Starting: ${5-i}`)
+        await client.setForeground();
         await new Promise(r => setTimeout(r, 1000));
     }
 
-    await client.setForeground();
     await client.mouseMove(parentWindow.sceneNumber.x, parentWindow.sceneNumber.y); // scene number textbox
     await client.mouseClick('left')
 
@@ -176,7 +176,7 @@ async function main() {
         for (const [index, element] of elementFields.entries()) {
             const targetElement  = scene?.elements[element];
 
-            if (typeof targetElement === "undefined") {
+            if (typeof targetElement === "undefined" || targetElement.length <= 0) {
                 console.info("[info]: skipping field " + element);
                 continue;
             }

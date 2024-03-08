@@ -14,15 +14,27 @@ console.log(MMSPATH)
 const window = utils.getWindow('Movie Magic Scheduling 6');
 let program;
 
-try {
-    program = new Hardware(null, window.className)
-    program.workwindow.refresh();
-} catch (error) {
-    console.error("[Error] " + error.message)
-    console.error("[*] Is Movie Magic Scheduling 6 running?")
+(async () => {
+    try {
+        const username = require('os').userInfo().username;
+        program = new Hardware(null, window.className)
+    
+        // setup config files
+        program.workwindow.kill();
+        await new Promise(r => setTimeout(r, 1500)) // wait for file to usable
+    
+        await fs.copyFile(path.join(__dirname, 'data', 'config.ini'), `C:\\Users\\${username}\\MMData\\MM Scheduling\\Settings\\config.ini`)
+        await fs.copyFile(path.join(__dirname, 'data', 'UserPreferencesMMS.ini'), `C:\\Users\\${username}\\MMData\\MM Scheduling\\Settings\\UserPreferencesMMS.ini`)
+    
+        program.workwindow.refresh();
+    } catch (error) {
+        console.error("[Error] " + error.message)
+        console.error("[*] Is Movie Magic Scheduling 6 running?")
+    
+        process.exit(1)
+    }
+})()
 
-    process.exit(1)
-}
 
 app.use(express.json())
 
@@ -53,7 +65,7 @@ app.get('/retrieve', async (req,res)=>{
             'Content-Disposition': `attachment; filename="current.msd"`
         }
     });
-})
+});
 
 app.post('/restart', async (req,res)=>{
     const template = "data\\default.msd";

@@ -3,3 +3,5 @@ node_modules
 data/*
 !/data/Default_Template.mst
 !/data/default.msd
+!/data/config.ini
+!/data/UserPreferencesMMS.ini

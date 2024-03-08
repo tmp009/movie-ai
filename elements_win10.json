@@ -1,13 +1,13 @@
 {
 	"elementBox": {
-		"element": {"x":187,"y":158},
-		"new": {"x":397,"y":158},
-		"insert":{"x":396,"y":213},
-		"find":{"x":397,"y":179},
-		"close":{"x":397,"y":280},
-		"item":{"x":198,"y":268},
-		"category":{"x":189,"y":178},
-		"categoryTop": {"x":189,"y":197}
+		"element": {"x":140,"y":180},
+		"new": {"x":331,"y":177},
+		"insert":{"x":331,"y":233},
+		"find":{"x":331,"y":200},
+		"close":{"x":331,"y":302},
+		"item":{"x":124,"y":290},
+		"category":{"x":124,"y":197},
+		"categoryTop": {"x":117,"y":211}
 
 	},
 	"parentWindow":{

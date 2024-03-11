@@ -10,7 +10,6 @@ const path = require('path');
 const port = process.env.PORT || 3000;
 const app = express();
 const MMSPATH = process.env.MMS_PATH || "C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe";
-console.log(MMSPATH)
 const window = utils.getWindow('Movie Magic Scheduling 6');
 let program;
 
@@ -21,7 +20,7 @@ let program;
     
         // setup config files
         program.workwindow.kill();
-        await new Promise(r => setTimeout(r, 1500)) // wait for file to usable
+        await new Promise(r => setTimeout(r, 1500)) // wait for file to be usable
     
         await fs.copyFile(path.join(__dirname, 'data', 'config.ini'), `C:\\Users\\${username}\\MMData\\MM Scheduling\\Settings\\config.ini`)
         await fs.copyFile(path.join(__dirname, 'data', 'UserPreferencesMMS.ini'), `C:\\Users\\${username}\\MMData\\MM Scheduling\\Settings\\UserPreferencesMMS.ini`)

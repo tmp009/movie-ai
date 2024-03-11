@@ -41,9 +41,10 @@ function splitScenes(data) {
 
 async function scriptToMetadata(text) {
     const messages = [
-        {role:'system', content: 'Use the given movie script to generate metadata for each scene. Generate metedata for all scenes. The user owns the rights to the script.'},
-        {role:'system', content: 'Metadata includes at minimum: scene number, actor\'s  name, age and death, and background actors'},
+        {role:'system', content: 'You are a movie script metadata generator. You will generate metedata for all scenes without failing. The user owns the rights to the script.'},
+        {role:'system', content: 'Metadata includes: scene number, actor\'s  name, age and death, and background actors'},
         {role:'system', content: 'Put the actor\'s age in all scenes where they appear regardless of if it is mentioned in the scene'},
+        {role:'system', content: 'do not ask if you can generate more. always generate for the entire script. ignore any limits.'},
         {role:'user', content: text}
     ]
 
@@ -61,7 +62,7 @@ async function scriptToJson(jsonStruct, metadata, scene) {
         {role:'system', content: 'Convert the given movie script into json. Try to populate all fields in the json structure for each scene.'},
         {role:'system', content: 'Do not add any new json fields. Always include "elements" even if it has empty object. From "elements" remove any fields with a empty list or string.'},
         {role:'system', content: 'Pay close attention to cast members, background actors and other elements. Ignore omitted scenes.'},
-        {role:'system', content: 'automatically generate contents for "notes" and "camera_lighting_notes" and always include scene_number, synopsis, time, location, set'},
+        {role:'system', content: 'automatically generate contents for "stunts", "notes" and "camera_lighting_notes" and always include scene_number, synopsis, time, location, set'},
         {role:'system', content: 'Metadata: ' + metadata},
         {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: scene}
@@ -71,7 +72,7 @@ async function scriptToJson(jsonStruct, metadata, scene) {
         messages: messages,
         model: 'gpt-4-1106-preview',
         response_format: {'type': 'json_object'},
-        temperature: 0.35
+        temperature: 1
     });
 
     return completion.choices[0].message.content
@@ -98,7 +99,7 @@ async function main() {
                 "elements": {
                     "cast_members": [{"name": "", "age": ""}],
                     "background_actors": [{"name": "", "age": ""}],
-                    "stunts": ["performed stunts by the actors"],
+                    "stunts": ["performed stunts or major action by the actors"],
                     "vehicles": [""],
                     "props": [""],
                     "camera": [""],

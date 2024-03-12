@@ -59,9 +59,11 @@ async function scriptToMetadata(text) {
 
 async function scriptToJson(jsonStruct, metadata, scene) {
     const messages = [
-        {role:'system', content: 'Convert the given movie script into json. Try to populate all fields in the json structure for each scene.'},
-        {role:'system', content: 'Do not add any new json fields. Always include "elements" even if it has empty object. From "elements" remove any fields with a empty list or string.'},
-        {role:'system', content: 'Pay close attention to cast members, background actors and other elements. Ignore omitted scenes.'},
+        {role:'system', content: 'convert the given movie script into json. try to populate all fields in the json structure for each scene.'},
+        {role:'system', content: 'do not add any new json fields. Always include "elements" even if it has empty object. From "elements" remove any fields with a empty list or string.'},
+        {role:'system', content: 'pay close attention to cast members, background actors and never include non-actors into "cast_members" or "background_actors". Ignore omitted scenes.'},
+        {role:'system', content: 'always seperate actors with same name with numbers i.e Guard #1, Guard #2. unknown age must be "null" type. never repeat scenes if the output for it is already generated'},
+        {role:'system', content: 'always look for and include all the props from the scene. never include "N/A" as item in elements'},
         {role:'system', content: 'automatically generate contents for "stunts", "notes" and "camera_lighting_notes" and always include scene_number, synopsis, time, location, set'},
         {role:'system', content: 'Metadata: ' + metadata},
         {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},

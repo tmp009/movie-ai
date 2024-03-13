@@ -6,7 +6,7 @@ const { exit } = require('process');
 const validator = require('./lib/validator');
 
 const maxRetries = process.env.OPENAI_RETRY;
-const maxScenes = 4; // max number of scenes to send at once.
+const maxScenes = 6; // max number of scenes to send at once.
 const openai = new OpenAI();
 
 if (process.argv.length < 4) {
@@ -42,9 +42,8 @@ function splitScenes(data) {
 async function scriptToMetadata(text) {
     const messages = [
         {role:'system', content: 'You are a movie script metadata generator. You will generate metedata for all scenes without failing. The user owns the rights to the script.'},
-        {role:'system', content: 'Metadata includes: scene number, actor\'s  name, age and death, and background actors'},
-        {role:'system', content: 'Put the actor\'s age in all scenes where they appear regardless of if it is mentioned in the scene'},
-        {role:'system', content: 'do not ask if you can generate more. always generate for the entire script. ignore any limits.'},
+        {role:'system', content: 'metadata will include the ages of the actors and background actors. give scene range for when the age is valid i.e. Joe (age: 33, 1-9A; age 34, 10-30)'},
+        {role:'system', content: 'do not ask if you can generate more. always generate for the entire script. ignore any limits unless the output is 4096 tokens long.'},
         {role:'user', content: text}
     ]
 
@@ -62,7 +61,7 @@ async function scriptToJson(jsonStruct, metadata, scene) {
         {role:'system', content: 'convert the given movie script into json. try to populate all fields in the json structure for each scene.'},
         {role:'system', content: 'do not add any new json fields. Always include "elements" even if it has empty object. From "elements" remove any fields with a empty list or string.'},
         {role:'system', content: 'pay close attention to cast members, background actors and never include non-actors into "cast_members" or "background_actors". Ignore omitted scenes.'},
-        {role:'system', content: 'always seperate actors with same name with numbers i.e Guard #1, Guard #2. unknown age must be "null" type. never repeat scenes if the output for it is already generated'},
+        {role:'system', content: 'always separate actors with same name with numbers i.e Guard #1, Guard #2. unknown age must be "null" type. never repeat scenes if the output for it is already generated'},
         {role:'system', content: 'always look for and include all the props from the scene. never include "N/A" as item in elements'},
         {role:'system', content: 'automatically generate contents for "stunts", "notes" and "camera_lighting_notes" and always include scene_number, synopsis, time, location, set'},
         {role:'system', content: 'Metadata: ' + metadata},

@@ -62,10 +62,10 @@ async function scriptToJson(jsonStruct, metadata, scene) {
         {role:'system', content: 'do not add any new json fields. Always include "elements" even if it has empty object. From "elements" remove any fields with a empty list or string.'},
         {role:'system', content: 'pay close attention to cast members, background actors and never include non-actors into "cast_members" or "background_actors". Ignore omitted scenes.'},
         {role:'system', content: 'always separate actors with same name with numbers i.e Guard #1, Guard #2. unknown age must be "null" type. never repeat scenes if the output for it is already generated'},
-        {role:'system', content: 'always look for and include all the props from the scene. never include "N/A" as item in elements'},
+        {role:'system', content: 'always look for and include all the props from the scene. never include "N/A" as item in elements. "secuirty" are things that the film crew need be cautious of like handling weapons, dangerous stunts, etc and it does not refer to any actors'},
         {role:'system', content: 'automatically generate contents for "stunts", "notes" and "camera_lighting_notes" and always include scene_number, synopsis, time, location, set'},
-        {role:'system', content: 'Metadata: ' + metadata},
-        {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
+        {role:'user', content: 'Metadata: ' + metadata},
+        {role:'user', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: scene}
     ]
 
@@ -107,6 +107,10 @@ async function main() {
                     "special_effects": [""],
                     "wardrobe": [""],
                     "makeup_or_hair": [""],
+                    "security": [""],
+                    "greenery": [""],
+                    "special_equipments": [""],
+                    "art_department": [""],
                     "animals": [""],
                     "music": [""],
                     "camera_lighting_notes": [""],

@@ -71,7 +71,7 @@ async function scriptToJson(jsonStruct, metadata, scene) {
 
     const completion = await openai.chat.completions.create({
         messages: messages,
-        model: 'gpt-4-1106-preview',
+        model: 'gpt-4-0125-preview',
         response_format: {'type': 'json_object'},
         temperature: 1
     });
@@ -139,6 +139,7 @@ async function main() {
                 console.error("Error: " + error.message)
                 return 
             } else {
+                console.error("Error: " + error.message)
                 console.error("Failed to receive script metadata from OpenAI! Retrying...")
             }
         }

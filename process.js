@@ -43,7 +43,7 @@ async function scriptToMetadata(text) {
     const messages = [
         {role:'system', content: 'You are a movie script metadata generator. You will generate metedata for all scenes without failing. The user owns the rights to the script.'},
         {role:'system', content: 'metadata will include the ages of the actors and background actors. give scene range for when the age is valid i.e. Joe (age: 33, 1-9A; age 34, 10-30)'},
-        {role:'system', content: 'do not ask if you can generate more. always generate for the entire script. ignore any limits unless the output is 4096 tokens long.'},
+        {role:'system', content: 'never ask if you can generate more like "(Many scenes omitted for brevity. Can include full breakdown upon request.)". always generate for the entire script. ignore any limits unless the output is 4096 tokens long.'},
         {role:'user', content: text}
     ]
 
@@ -58,14 +58,14 @@ async function scriptToMetadata(text) {
 
 async function scriptToJson(jsonStruct, metadata, scene) {
     const messages = [
-        {role:'system', content: 'convert the given movie script into json. try to populate all fields in the json structure for each scene.'},
-        {role:'system', content: 'do not add any new json fields. Always include "elements" even if it has empty object. From "elements" remove any fields with a empty list or string.'},
-        {role:'system', content: 'pay close attention to cast members, background actors and never include non-actors into "cast_members" or "background_actors". Ignore omitted scenes.'},
-        {role:'system', content: 'always separate actors with same name with numbers i.e Guard #1, Guard #2. unknown age must be "null" type. never repeat scenes if the output for it is already generated'},
-        {role:'system', content: 'always look for and include all the props from the scene. never include "N/A" as item in elements. "secuirty" are things that the film crew need be cautious of like handling weapons, dangerous stunts, etc and it does not refer to any actors'},
-        {role:'system', content: 'automatically generate contents for "stunts", "notes" and "camera_lighting_notes" and always include scene_number, synopsis, time, location, set'},
+        {role:'system', content: 'Convert the given movie script into JSON. Populate all fields for each scene.'},
+        {role:'system', content: 'Do not add new JSON fields. Always include "elements", even if empty. Remove fields with empty array from "elements".'},
+        {role:'system', content: 'Pay attention to cast members and background actors. Exclude non-actors. Ignore omitted scenes.'},
+        {role:'system', content: 'Separate actors with the same name with numbers (e.g., Guard #1, Guard #2). Unknown age must be "null". Do not repeat scenes.'},
+        {role:'system', content: 'Include all props. Exclude "N/A" from elements. "Security" refers to crew safety, not actors.'},
+        {role:'system', content: 'Generate contents for "animal_wrangler", "stunts", "notes", and "camera_lighting_notes". Include scene details.'},
+        {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: 'Metadata: ' + metadata},
-        {role:'user', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: scene}
     ]
 
@@ -112,6 +112,7 @@ async function main() {
                     "special_equipments": [""],
                     "art_department": [""],
                     "animals": [""],
+                    "animal_wrangler": [""],
                     "music": [""],
                     "camera_lighting_notes": [""],
                     "sound": [""],

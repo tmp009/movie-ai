@@ -63,7 +63,7 @@ async function scriptToJson(jsonStruct, metadata, scene) {
         {role:'system', content: 'Pay attention to cast members and background actors. Exclude non-actors. Ignore omitted scenes.'},
         {role:'system', content: 'Separate actors with the same name with numbers (e.g., Guard #1, Guard #2). Unknown age must be "null". Do not repeat scenes.'},
         {role:'system', content: 'Include all props. Exclude "N/A" from elements. "Security" refers to crew safety, not actors.'},
-        {role:'system', content: 'Generate contents for "animal_wrangler", "stunts", "notes", and "camera_lighting_notes". Include scene details.'},
+        {role:'system', content: 'Generate contents for "animal_wrangler", "stunts", "notes", and "camera_lighting_notes" "comments". Include scene details.'},
         {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: 'Metadata: ' + metadata},
         {role:'user', content: scene}
@@ -93,6 +93,7 @@ async function main() {
                 "synopsis": "",
                 "time": "Always use one of these: Morning,Day,Evening,Night",
                 "location": "",
+                "comments": "",
                 "set": {
                     "type": ["INT", "EXT"],
                     "description": ""

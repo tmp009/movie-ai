@@ -75,7 +75,9 @@ const elementFields = [
     "special_effects",
     "wardrobe",
     "makeup_or_hair",
+    "art_department",
     "animals",
+    "animal_wrangler",
     "music",
     "sound",
     "set_dressing",
@@ -171,6 +173,12 @@ async function main() {
         
         // row 4
         await client.writeTextTab(scene.location)
+
+        if (scene?.comments?.length > 0) {
+            await client.sendMultipleKeys(['tab', 'tab']);
+            await client.writeTextTab(scene.comments);
+
+        }
     
         // Elements
         for (const [index, element] of elementFields.entries()) {
@@ -209,6 +217,13 @@ async function main() {
                 case "vfx":
                     await client.sendMultipleKeys("vis".split(''))
                     break
+
+                case "security":
+                    await client.sendMultipleKeys("sec".split(''))
+
+                case "animal_wrangler":
+                    await client.sendMultipleKeys("animal".split('').concat(['space', 'w']))
+
                 default:
                     await client.keyTap(element.split('_')[0].split(''))
             }

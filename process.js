@@ -165,6 +165,7 @@ async function main() {
                     console.error("Error: " + error.message)
                     return 
                 } else {
+                    console.error("Error: " + error.message)
                     console.error("Failed to receive data from OpenAI! Retrying...")
                 }
             }
@@ -189,6 +190,7 @@ async function main() {
                     console.error("Error: " + error.message)
                     return
                 } else {
+                    console.error("Error: " + error.message)
                     console.error("Failed to receive valid JSON data! Retrying...")
                 }
             }

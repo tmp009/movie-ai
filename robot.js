@@ -243,7 +243,7 @@ async function main() {
 
                 if (element == 'cast_members' || element == 'background_actors') {
 
-                    if (String(value?.age) != 'undefined' &&  String(value?.age).length > 0) {
+                    if (!['undefined', 'null'].includes(String(value?.age)) &&  String(value?.age).length > 0) {
                         value = `${value?.name} (${value?.age})`;
                         
                     } else {

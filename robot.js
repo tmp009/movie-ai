@@ -33,7 +33,7 @@ const argv = yargs
             default: "output.msd",
         }
 })
-.showHelpOnFail(true, 'Error: Missing positional argument. Please provide a positional argument.\nMake sure Movie Magic Scheduling 6 is open with Default_Template.mst on the target machine.\n') 
+.showHelpOnFail(true, 'Error: Missing positional argument. Please provide a positional argument.\nMake sure Movie Magic Scheduling 6 is open with Default_Template.mst on the target machine.\n')
 .demandCommand(1)
 .usage('Usage: $0 [options] <script>')
 .alias('h', 'help')
@@ -92,10 +92,10 @@ const elementFields = [
 ]
 
 
-async function main() { 
+async function main() {
     const inputFile =  args[0];
     const data = await fs.readFile(inputFile, {encoding: 'utf-8'});
-    const cache = { cast_members: [], background_actors: [] } // avoid trying to recreate the elements 
+    const cache = { cast_members: [], background_actors: [] } // avoid trying to recreate the elements
     let jsonData;
 
     try {
@@ -136,15 +136,14 @@ async function main() {
         }
 
         await client.keyTap('tab');
-        
-        await client.writeTextTab(scene.set.description)
-        
+
+        await client.writeTextTab(scene.location)
+
         switch (scene.time.toUpperCase()) {
             case 'DAY':
                 await client.keyTap('down');
                 break;
 
-            
             case 'NIGHT':
                 await client.sendMultipleKeys(['down', 'down'])
                 break;
@@ -152,17 +151,17 @@ async function main() {
             case 'MORNING':
                 await client.sendMultipleKeys(['down', 'down', 'down'])
                 break;
-            
+
             case 'EVENING':
                 await client.sendMultipleKeys(['down', 'down', 'down', 'down'])
                 break;
-        
+
             default:
                 break;
         }
 
         await client.sendMultipleKeys(['tab', 'tab', 'tab'])
-        
+
 
         // row 2
         await client.writeTextTab(scene.synopsis)
@@ -170,16 +169,10 @@ async function main() {
         // row 3
         await client.sendMultipleKeys(['tab', 'tab', 'tab', 'tab'])
 
-        
+
         // row 4
         await client.writeTextTab(scene.location)
 
-        if (scene?.comments?.length > 0) {
-            await client.sendMultipleKeys(['tab', 'tab']);
-            await client.writeTextTab(scene.comments);
-
-        }
-    
         // Elements
         for (const [index, element] of elementFields.entries()) {
             const targetElement  = scene?.elements[element];
@@ -190,16 +183,16 @@ async function main() {
             }
 
             console.info("[info]: field", element, "with index", index, "has item count:", targetElement.length);
-            
+
             await client.keyTap(['ctrl', 'e']); // open element creator
-            
+
             await client.mouseMove(elementBox.category.x, elementBox.category.y); // category button
-            await client.mouseClick('left'); 
+            await client.mouseClick('left');
             await client.mouseMove(elementBox.categoryTop.x, elementBox.categoryTop.y); // all category
             await client.mouseClick('left');
 
             await client.mouseMove(elementBox.category.x, elementBox.category.y); // category button
-            await client.mouseClick('left'); 
+            await client.mouseClick('left');
 
             switch (element) {
                 case "cast_members":
@@ -209,7 +202,7 @@ async function main() {
                 case "background_actors":
                     await client.keyTap("back".split(''));
                     break
-                
+
                 case "special_equipment":
                     await client.sendMultipleKeys("special".split('').concat(['space', 'e', 'q']))
                     break
@@ -237,7 +230,7 @@ async function main() {
                 console.info("[info]: inserting", value, "into", element);
 
                 await client.mouseMove(elementBox.element.x, elementBox.element.y); // element textbox
-                await client.mouseClick('left', true); 
+                await client.mouseClick('left', true);
                 await client.keyTap(['ctrl', 'a']);
                 await client.keyTap(['ctrl', 'backspace']);
 
@@ -245,7 +238,7 @@ async function main() {
 
                     if (!['undefined', 'null'].includes(String(value?.age)) &&  String(value?.age).length > 0) {
                         value = `${value?.name} (${value?.age})`;
-                        
+
                     } else {
                         value = `${value?.name}`
                     }
@@ -262,18 +255,18 @@ async function main() {
                 if (!skipCreate) {
                     await client.mouseMove(elementBox.new.x, elementBox.new.y); // new button
                     await client.mouseClick('left');
-    
+
                     await new Promise(r => setTimeout(r, 200))
-    
+
                     if ((await client.getProcess('Element Quick Entry')).process) {
                         await client.keyTap('enter')
-    
+
                         await client.mouseMove(elementBox.find.x, elementBox.find.y); // find button
                         await client.mouseClick('left');
-    
+
                         await client.mouseMove(elementBox.item.x, elementBox.item.y); // element
                         await client.mouseClick('left');
-    
+
                         await client.mouseMove(elementBox.insert.x, elementBox.insert.y); // insert element
                         await client.mouseClick('left');
                     }
@@ -294,14 +287,14 @@ async function main() {
             }
 
             await client.mouseMove(elementBox.close.x, elementBox.close.y); // close button
-            await client.mouseClick('left'); 
+            await client.mouseClick('left');
         }
 
         // escape elements field
         console.info('[info]: starting new scene')
         await client.mouseMove(parentWindow.sceneNumber.x, parentWindow.sceneNumber.y);
         await client.mouseClick('left')
-        
+
         // Change scene
         await client.keyTap(["ctrl", "right"]);
 
@@ -317,7 +310,7 @@ async function main() {
     await new Promise(r => setTimeout(r, 2500))
 
     console.log('Saving file to', output)
-    
+
     const file = await client.retrieve();
     const fileblob = await file.blob();
 

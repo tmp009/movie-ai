@@ -12,13 +12,13 @@ const openai = new OpenAI();
 if (process.argv.length < 4) {
     console.log(`node process.js <script> <output>`)
     exit(0)
-} 
+}
 
 
 function splitScenes(data) {
     const scenes = [];
     let currentScene = { head: '', lines: [] };
-    
+
     data.forEach((line, index) => {
         if (line.match(/(EXT\.|INT\.)/)) {
             if (currentScene.head != '') {
@@ -56,16 +56,18 @@ async function scriptToMetadata(text) {
     return completion.choices[0].message.content
 }
 
-async function scriptToJson(jsonStruct, metadata, scene) {
+async function scriptToJson(jsonStruct, metadata, scene, offset) {
     const messages = [
         {role:'system', content: 'Convert the given movie script into JSON. Populate all fields for each scene.'},
         {role:'system', content: 'Do not add new JSON fields. Always include "elements", even if empty. Remove fields with empty array from "elements".'},
         {role:'system', content: 'Pay attention to cast members and background actors. Exclude non-actors. Ignore omitted scenes.'},
         {role:'system', content: 'Separate actors with the same name with numbers (e.g., Guard #1, Guard #2). Unknown age must be "null". Do not repeat scenes.'},
         {role:'system', content: 'Include all props. Exclude "N/A" from elements. "Security" refers to crew safety, not actors.'},
-        {role:'system', content: 'Generate contents for "animal_wrangler", "stunts", "notes", and "camera_lighting_notes" "comments". Include scene details.'},
+        {role:'system', content: 'Generate contents for "animal_wrangler", "stunts", "notes", and "camera_lighting_notes"'},
+        {role:'system', content: 'Use scene offset to determine the scene number for when it doesn\'t exist.'},
         {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: 'Metadata: ' + metadata},
+        {role:'user', content: 'Scene offset: ' + offset},
         {role:'user', content: scene}
     ]
 
@@ -83,9 +85,9 @@ async function main() {
     const inputFile =  process.argv[2];
     const outFile =  process.argv[3];
     const data = await fs.readFile(inputFile, {encoding: 'utf-8'})
-    const scenes = splitScenes(data.split('\n')); 
+    const scenes = splitScenes(data.split('\n'));
     const jsonData = { metadata: "", scenes: [] } // all scenes will be stored here
-    
+
     const jsonStruct = {
         "scenes": [
             {
@@ -93,10 +95,8 @@ async function main() {
                 "synopsis": "",
                 "time": "Always use one of these: Morning,Day,Evening,Night",
                 "location": "",
-                "comments": "",
                 "set": {
                     "type": ["INT", "EXT"],
-                    "description": ""
                 },
                 "elements": {
                     "cast_members": [{"name": "", "age": ""}],
@@ -139,7 +139,7 @@ async function main() {
             if (attempt+1 >= maxRetries) {
                 console.error("Failed to receive script metadata from OpenAI!")
                 console.error("Error: " + error.message)
-                return 
+                return
             } else {
                 console.error("Error: " + error.message)
                 console.error("Failed to receive script metadata from OpenAI! Retrying...")
@@ -150,27 +150,26 @@ async function main() {
     // generate script to json
     for (let i = 0; i < scenes.length; i+=maxScenes) {
         const sceneChunk = scenes.slice(i, i+maxScenes).join('\n');
-        
-        
+
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             let openaiResp;
-            
+
             // convert script scenes into json
             try {
                 console.log(`Converting script to JSON [${Math.ceil((i+1)/maxScenes)}/${ Math.ceil(scenes.length / maxScenes) }]...`);
-                openaiResp = await scriptToJson(jsonStruct, jsonData.metadata, sceneChunk);
+                openaiResp = await scriptToJson(jsonStruct, jsonData.metadata, sceneChunk, i);
             } catch (error) {
                 if (attempt+1 >= maxRetries) {
                     console.error("Failed to receive data from OpenAI!")
                     console.error("Error: " + error.message)
-                    return 
+                    return
                 } else {
                     console.error("Error: " + error.message)
                     console.error("Failed to receive data from OpenAI! Retrying...")
                 }
             }
 
-            // parse json string and store all 
+            // parse json string and store all
             // the scenes in a single object
             try {
                 const jsonResp = JSON.parse(openaiResp);

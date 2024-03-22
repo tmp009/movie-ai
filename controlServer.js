@@ -17,19 +17,19 @@ let program;
     try {
         const username = require('os').userInfo().username;
         program = new Hardware(null, window.className)
-    
+
         // setup config files
         program.workwindow.kill();
         await new Promise(r => setTimeout(r, 1500)) // wait for file to be usable
-    
+
         await fs.copyFile(path.join(__dirname, 'data', 'config.ini'), `C:\\Users\\${username}\\MMData\\MM Scheduling\\Settings\\config.ini`)
         await fs.copyFile(path.join(__dirname, 'data', 'UserPreferencesMMS.ini'), `C:\\Users\\${username}\\MMData\\MM Scheduling\\Settings\\UserPreferencesMMS.ini`)
-    
+
         program.workwindow.refresh();
     } catch (error) {
         console.error("[Error] " + error.message)
         console.error("[*] Is Movie Magic Scheduling 6 running?")
-    
+
         process.exit(1)
     }
 })()
@@ -70,15 +70,15 @@ app.post('/restart', async (req,res)=>{
     const template = "data\\default.msd";
     const templateTmp = "data\\default_tmp.msd";
     program.workwindow.kill();
-    
+
     try {
         const data = await fs.readFile(template);
 
         await new Promise(r => setTimeout(r, 3000))
         await fs.writeFile(templateTmp, data);
-        
+
         exec(`"${MMSPATH}" "data\\default_tmp.msd"`)
-        
+
         const intervalId = setInterval(() => {
             if (program.workwindow.isOpen() && utils.getWindow('Movie Magic Scheduling 6 - default_tmp')) {
                 clearInterval(intervalId);
@@ -86,7 +86,7 @@ app.post('/restart', async (req,res)=>{
             } else {
                 program.workwindow.refresh();
             }
-        }, 1000); 
+        }, 1000);
     } catch (error) {
         console.log(error)
         res.status(500).json({error:error.message})
@@ -99,10 +99,10 @@ app.post('/set/foreground', (req,res)=>{
 })
 
 app.get('/mouse/coord', async (req,res) => {
-    try {  
+    try {
         const mousePos = program.mouse.getPos()
         res.json({x:mousePos.x, y:mousePos.y})
-        
+
     } catch (error) {
         console.error(error)
         res.status(500).json({error:error.message})
@@ -123,9 +123,9 @@ app.post('/mouse/move', async (req,res) => {
         }
 
         await program.mouse.moveTo(xPos, yPos);
-    
+
         res.json({status:200})
-        
+
     } catch (error) {
         console.error(error)
         res.status(500).json({error:error.message})
@@ -148,9 +148,9 @@ app.post('/mouse/click', async (req,res) => {
             await program.mouse.click(button);
         }
 
-        
+
         res.json({status:200})
-        
+
     } catch (error) {
         console.error(error)
         res.status(500).json({error:error.message})
@@ -164,10 +164,10 @@ app.post('/keyboard/key', async (req,res) => {
         if (!key) {
             return res.json({error:'Missing parameter "key"'})
         }
-    
+
         await program.keyboard.sendKey(key)
         res.json({status:200})
-        
+
     } catch (error) {
         console.log(error)
         res.status(500).json({error:error.message})
@@ -177,14 +177,14 @@ app.post('/keyboard/key', async (req,res) => {
 app.post('/keyboard/multiple', async (req,res) => {
     try {
         const keys = req.body.keys;
-        
+
         if (!keys) {
             return res.status(400).json({error:'missing parameter "keys"'})
         }
-    
+
         await program.keyboard.sendKeys(keys)
         res.json({status:200})
-        
+
     } catch (error) {
         console.log(error)
         res.status(500).json({error:error.message})
@@ -196,18 +196,14 @@ app.post('/write', async (req,res) => {
         const text = req.body.text;
         const tab = req.body.tab;
 
-        if (!text) {
-            return res.status(400).json({error:'missing parameter "text"'})
-        }
-    
         if (tab) {
             await utils.writeTextTab(program, text)
         } else {
             await utils.writeText(program, text)
         }
-        
+
         res.json({status:200})
-        
+
     } catch (error) {
         console.log(error)
 
@@ -227,11 +223,11 @@ app.post('/toggle', (req,res) => {
         if (!state) {
             return res.status(400).json({error:'missing parameter "state"'})
         }
-    
+
         program.keyboard.toggleKey(key, state, 50);
-        
+
         res.status(500).json({status:200})
-        
+
     } catch (error) {
         console.log(error)
 

@@ -41,19 +41,28 @@ function splitScenes(data) {
 
 async function scriptToMetadata(text) {
     const messages = [
-        {role:'system', content: 'You are a movie script metadata generator. You will generate metedata for all scenes without failing. The user owns the rights to the script.'},
+        {role:'system', content: 'You are a movie script metadata generator. Generate metadata for all scenes without failing. The user owns the rights to the script.'},
         {role:'system', content: 'metadata will include the ages of the actors and background actors. give scene range for when the age is valid i.e. Joe (age: 33, 1-9A; age 34, 10-30)'},
         {role:'system', content: 'never ask if you can generate more like "(Many scenes omitted for brevity. Can include full breakdown upon request.)". always generate for the entire script. ignore any limits unless the output is 4096 tokens long.'},
         {role:'user', content: text}
     ]
 
+    let response = "";
+
     const completion = await openai.chat.completions.create({
         messages: messages,
         model: 'gpt-4-1106-preview',
-        temperature: 1
+        temperature: 1,
+        stream: true
     });
 
-    return completion.choices[0].message.content
+
+    for await (const chunk of completion) {
+        response += chunk.choices[0]?.delta?.content || ""
+        process.stdout.write(chunk.choices[0]?.delta?.content || "");
+    }
+
+    return response
 }
 
 async function scriptToJson(jsonStruct, metadata, scene, offset) {

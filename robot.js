@@ -127,11 +127,11 @@ async function main() {
         await client.writeTextTab(scene.scene_number)
 
 
-        if (scene.set.type.length > 1)  { // INT/EXT
+        if (scene?.set?.type?.length > 1)  { // INT/EXT
             await client.sendMultipleKeys(['down', 'down', 'down'])
-        } else if (scene.set.type[0].toUpperCase() == 'INT') {
+        } else if (scene?.set?.type[0]?.toUpperCase() == 'INT') {
             await client.keyTap('down');
-        } else if (scene.set.type[0].toUpperCase() == 'EXT') {
+        } else if (scene?.set?.type[0]?.toUpperCase() == 'EXT') {
             await client.sendMultipleKeys(['down', 'down'])
         }
 
@@ -139,7 +139,7 @@ async function main() {
 
         await client.writeTextTab(scene.location)
 
-        switch (scene.time.toUpperCase()) {
+        switch (scene?.time?.toUpperCase()) {
             case 'DAY':
                 await client.keyTap('down');
                 break;

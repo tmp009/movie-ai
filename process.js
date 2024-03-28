@@ -2,18 +2,37 @@ require('dotenv').config();
 
 const { OpenAI } = require('openai');
 const fs = require('fs/promises');
-const { exit } = require('process');
 const validator = require('./lib/validator');
+const yargs = require('yargs');
 
-const maxRetries = process.env.OPENAI_RETRY;
+const maxRetries = process.env.OPENAI_RETRY || 4;
 const maxScenes = 6; // max number of scenes to send at once.
 const openai = new OpenAI();
 
-if (process.argv.length < 4) {
-    console.log(`node process.js <script> <output>`)
-    exit(0)
-}
 
+// Define the command-line options
+const argv = yargs
+    .options({
+        'retry': {
+            alias: 'r',
+            describe: 'continue off from existing json file.',
+            type: 'string',
+            default: "",
+        },
+        'output':{
+            alias: 'o',
+            describe: 'output filename for json.',
+            type: 'string',
+            default: "output.json",
+        }
+})
+.showHelpOnFail(true, 'Error: Missing positional argument. Please provide a positional argument')
+.demandCommand(1)
+.usage('Usage: $0 [options] <script>')
+.alias('h', 'help')
+.argv;
+
+const args = argv._;
 
 function splitScenes(data) {
     const scenes = [];
@@ -41,7 +60,7 @@ function splitScenes(data) {
 
 async function scriptToMetadata(text) {
     const messages = [
-        {role:'system', content: 'You are a movie script metadata generator. Generate metadata for all scenes without failing. The user owns the rights to the script.'},
+        {role:'system', content: 'You are a movie script metadata generator. Generate metadata without failing. The user owns the rights to the script.'},
         {role:'system', content: 'metadata will include the ages of the actors and background actors. give scene range for when the age is valid i.e. Joe (age: 33, 1-9A; age 34, 10-30)'},
         {role:'system', content: 'never ask if you can generate more like "(Many scenes omitted for brevity. Can include full breakdown upon request.)". always generate for the entire script. ignore any limits unless the output is 4096 tokens long.'},
         {role:'user', content: text}
@@ -52,15 +71,17 @@ async function scriptToMetadata(text) {
     const completion = await openai.chat.completions.create({
         messages: messages,
         model: 'gpt-4-1106-preview',
-        temperature: 1,
+        temperature: 0.1,
         stream: true
     });
 
 
     for await (const chunk of completion) {
-        response += chunk.choices[0]?.delta?.content || ""
+        response += chunk.choices[0]?.delta?.content || "";
         process.stdout.write(chunk.choices[0]?.delta?.content || "");
     }
+
+    console.log("");
 
     return response
 }
@@ -91,12 +112,16 @@ async function scriptToJson(jsonStruct, metadata, scene, offset) {
 }
 
 async function main() {
-    const inputFile =  process.argv[2];
-    const outFile =  process.argv[3];
+    const inputFile =  args[0];
+    const outFile =  argv.output;
     const data = await fs.readFile(inputFile, {encoding: 'utf-8'})
-    const scenes = splitScenes(data.split('\n'));
-    const jsonData = { metadata: "", scenes: [] } // all scenes will be stored here
+    let jsonData = { chunkNum: null, metadata: "", scenes: [] } // all scenes will be stored here
 
+    if (argv.retry != "") {
+        jsonData = JSON.parse(await fs.readFile(argv.retry, {encoding: 'utf-8'}))
+    }
+
+    const scenes = splitScenes(data.split('\n'));
     const jsonStruct = {
         "scenes": [
             {
@@ -137,36 +162,44 @@ async function main() {
     }
 
     // generate metadata
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-            console.log('Generating metadata...');
-            console.info('[metadata]: data.length =', data.length);
-            jsonData.metadata = await scriptToMetadata(data);
-            console.info("[metadata]:", jsonData.metadata)
-            break
-        } catch (error) {
-            if (attempt+1 >= maxRetries) {
-                console.error("Failed to receive script metadata from OpenAI!")
-                console.error("Error: " + error.message)
-                return
-            } else {
-                console.error("Error: " + error.message)
-                console.error("Failed to receive script metadata from OpenAI! Retrying...")
+    if (jsonData.metadata == "")  {
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                console.log('Generating metadata...');
+                console.info('[metadata]: data.length =', data.length);
+                console.info("[metadata]: ")
+                jsonData.metadata = await scriptToMetadata(data);
+
+                if (jsonData.metadata.split(' ').length < 100) {
+                    throw new Error('The metadata was too short')
+                }
+                break
+            } catch (error) {
+                if (attempt+1 >= maxRetries) {
+                    console.error("Failed to receive script metadata from OpenAI!")
+                    console.error("Error: " + error.message)
+                    return
+                } else {
+                    console.error("Error: " + error.message)
+                    console.error("Failed to receive script metadata from OpenAI! Retrying...")
+                }
             }
         }
     }
 
     // generate script to json
-    for (let i = 0; i < scenes.length; i+=maxScenes) {
-        const sceneChunk = scenes.slice(i, i+maxScenes).join('\n');
+    let idx = jsonData.chunkNum * maxScenes || 0;
+
+    for (; idx < scenes.length; idx+=maxScenes) {
+        const sceneChunk = scenes.slice(idx, idx+maxScenes).join('\n');
 
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             let openaiResp;
 
             // convert script scenes into json
             try {
-                console.log(`Converting script to JSON [${Math.ceil((i+1)/maxScenes)}/${ Math.ceil(scenes.length / maxScenes) }]...`);
-                openaiResp = await scriptToJson(jsonStruct, jsonData.metadata, sceneChunk, i);
+                console.log(`Converting script to JSON [${Math.ceil((idx+1)/maxScenes)}/${ Math.ceil(scenes.length / maxScenes) }]...`);
+                openaiResp = await scriptToJson(jsonStruct, jsonData.metadata, sceneChunk, idx+1);
             } catch (error) {
                 if (attempt+1 >= maxRetries) {
                     console.error("Failed to receive data from OpenAI!")
@@ -177,6 +210,7 @@ async function main() {
                     console.error("Failed to receive data from OpenAI! Retrying...")
                 }
             }
+
 
             // parse json string and store all
             // the scenes in a single object
@@ -189,7 +223,11 @@ async function main() {
                     }
                     validator.sceneJson(scene)
                     jsonData.scenes.push(scene)
+
                 }
+
+                jsonData.chunkNum += 1;
+                await fs.writeFile(outFile, JSON.stringify(jsonData));
 
                 break
             } catch (error) {

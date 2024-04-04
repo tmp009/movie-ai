@@ -137,7 +137,7 @@ async function main() {
 
         await client.keyTap('tab');
 
-        await client.writeTextTab(scene.location)
+        await client.writeTextTab(scene.location.toUpperCase())
 
         switch (scene?.time?.toUpperCase()) {
             case 'DAY':
@@ -167,11 +167,18 @@ async function main() {
         await client.writeTextTab(scene.synopsis)
 
         // row 3
-        await client.sendMultipleKeys(['tab', 'tab', 'tab', 'tab'])
+        await client.keyTap('tab')
+
+        if (scene?.time?.toUpperCase() == 'NIGHT') {
+            await client.writeTextTab('N' + scene.current_day)
+        } else {
+            await client.writeTextTab('D' + scene.current_day)
+        }
+        await client.sendMultipleKeys(['tab', 'tab'])
 
 
         // row 4
-        await client.writeTextTab(scene.location)
+        await client.writeTextTab(scene.location.toUpperCase())
 
         // Elements
         for (const [index, element] of elementFields.entries()) {

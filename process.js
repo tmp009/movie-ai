@@ -86,7 +86,7 @@ async function scriptToMetadata(text) {
     return response
 }
 
-async function scriptToJson(jsonStruct, metadata, scene, offset, currentDay = 1, prevSceneTime=null) {
+async function scriptToJson(jsonStruct, metadata, scene, offset, currentDay = 1, prevSceneTime=null, prevScenePage) {
     const messages = [
         {role:'system', content: 'Convert the given movie script into JSON. Populate all fields for each scene.'},
         {role:'system', content: 'Do not add new JSON fields. Always include "elements", even if empty. Remove fields with empty array from "elements".'},
@@ -95,12 +95,13 @@ async function scriptToJson(jsonStruct, metadata, scene, offset, currentDay = 1,
         {role:'system', content: 'Include all props. Exclude "N/A" from elements. "Security" refers to crew safety, not actors.'},
         {role:'system', content: 'Generate contents for "animal_wrangler", "stunts", "notes", and "camera_lighting_notes"'},
         {role:'system', content: 'Include in notes if a scene has intimacy: nudity, kissing, sex-scene, touching, etc. and if scene has violence: <violence type>.'},
-        {role:'system', content: 'Use scene offset to determine the scene number for when it doesn\'t exist. use line number at the start of each line to calculate "division": n / 8 of a page. "current_day" is a number and its order from high to low is morning, day, evening, night and if a scene with a lower order day is followed by an high order day then increase day number from that point'},
+        {role:'system', content: 'Use scene offset to determine the scene number for when it doesn\'t exist. use line number (number:>) at the start of each line to estimate "division" how mant 8th of a page a scene is and how many "pages" does a scene expand to (must be whole number). "current_day" is a number and its order from high to low is morning, day, evening, night and if a scene with a lower order day is followed by an high order day then increase day number from that point. estimate "page_number" as as a whole number while taking into account that large scenes expand into multiple pages. <page break> means new page starts'},
         {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: 'Metadata: ' + metadata},
         {role:'user', content: 'Scene offset: ' + offset},
         {role:'user', content: `current day: ${currentDay}`},
         {role:'user', content: `previous scene time: ${prevSceneTime || 'unknown'}`},
+        {role:'user', content: 'previous scene page: ' + prevScenePage},
         {role:'user', content: scene}
     ]
 
@@ -121,23 +122,27 @@ async function main() {
     let jsonData = { chunkNum: null, metadata: "", scenes: [] } // all scenes will be stored here
     let currentDay = 1;
     let prevSceneTime = null;
+    let prevScenePage = 1;
 
     if (argv.retry != "") {
         jsonData = JSON.parse(await fs.readFile(argv.retry, {encoding: 'utf-8'}))
         currentDay = jsonData.scenes[jsonData.scenes.length-1].current_day;
         prevSceneTime = jsonData.scenes[jsonData.scenes.length-1].time;
+        prevScenePage = jsonData.scenes[jsonData.scenes.length-1].page_number;
     }
 
-    const scenes = splitScenes(data.split('\n'));
+    const scenes = splitScenes(data.split('\n').map((text, index) => `${index}:> ${text.replace(/^\d+\./, '<page break>')}`));
     const jsonStruct = {
         "scenes": [
             {
                 "scene_number": "",
+                "page_number": 1,
                 "synopsis": "DO NOT MAKE THIS LONGER THAN A SENTENCE AND KEEP IT SHORT",
                 "time": "Always use one of these: Morning,Day,Evening,Night. Always default to the closest time if the time isn\t in the list",
                 "location": "",
                 "current_day": null,
                 "division": null,
+                "pages": 1,
                 "set": {
                     "type": ["INT", "EXT"],
                 },
@@ -198,9 +203,24 @@ async function main() {
 
     // generate script to json
     let idx = jsonData.chunkNum * maxScenes || 0;
+    let addPageBreak = false;
 
     for (; idx < scenes.length; idx+=maxScenes) {
-        const sceneChunk = scenes.slice(idx, idx+maxScenes).join('\n');
+        const sceneChunk = scenes.slice(idx, idx+maxScenes); // .join('\n')
+
+        let chunkString = "";
+
+        if (addPageBreak) {
+            chunkString += "<page break>"
+        }
+
+        chunkString += sceneChunk.join('\n');
+
+        if (sceneChunk[sceneChunk.length - 1].endsWith('<page break>')) {
+            addPageBreak = true;
+        } else {
+            addPageBreak = false;
+        }
 
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             let openaiResp;
@@ -208,7 +228,10 @@ async function main() {
             // convert script scenes into json
             try {
                 console.log(`Converting script to JSON [${Math.ceil((idx+1)/maxScenes)}/${ Math.ceil(scenes.length / maxScenes) }]...`);
-                openaiResp = await scriptToJson(jsonStruct, jsonData.metadata, sceneChunk, idx+1, currentDay, prevSceneTime);
+                openaiResp = await scriptToJson(jsonStruct, jsonData.metadata,
+                                                chunkString, idx+1, currentDay,
+                                                prevSceneTime, prevScenePage
+                                            );
             } catch (error) {
                 if (attempt+1 >= maxRetries) {
                     console.error("Failed to receive data from OpenAI!")
@@ -234,13 +257,16 @@ async function main() {
                         scene.time = "night";
                     }
 
-                    validator.sceneJson(scene)
-                    jsonData.scenes.push(scene)
+                    scene.division = Math.floor(Number(scene.division));
+
+                    validator.sceneJson(scene);
+                    jsonData.scenes.push(scene);
 
                 }
 
                 currentDay = jsonData.scenes[jsonData.scenes.length-1].current_day
                 prevSceneTime = jsonData.scenes[jsonData.scenes.length-1].time;
+                prevScenePage = jsonData.scenes[jsonData.scenes.length-1].page_number;
 
                 jsonData.chunkNum += 1;
                 await fs.writeFile(outFile, JSON.stringify(jsonData, null, 4));

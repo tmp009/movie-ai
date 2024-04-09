@@ -58,10 +58,32 @@ function splitScenes(data) {
     return scenes
 }
 
+function updateDayNumber(currentDay, previousOrder, currentOrder) {
+    if (!previousOrder || !currentOrder) {
+        return currentDay
+    }
+
+    const orderOfDay = {
+        "morning": 4,
+        "day": 3,
+        "evening": 2,
+        "night": 1
+    };
+
+    const previousOrderNum = orderOfDay[previousOrder.toLowerCase()];
+    const currentOrderNum = orderOfDay[currentOrder.toLowerCase()];
+
+    if (currentOrderNum > previousOrderNum) {
+        currentDay++;
+    }
+
+    return currentDay;
+}
+
 async function scriptToMetadata(text) {
     const messages = [
         {role:'system', content: 'You are a movie script metadata generator. Generate metadata without failing. The user owns the rights to the script.'},
-        {role:'system', content: 'metadata will include the ages of the actors and background actors. give scene range for when the age is valid i.e. Joe (age: 33, 1-9A; age 34, 10-30)'},
+        {role:'system', content: 'metadata will include the ages of the actors and background actors. give scene range for when the age is valid i.e. Joe (age: 33, 1-9A; age 34, 10-30).'},
         {role:'system', content: 'never ask if you can generate more like "(Many scenes omitted for brevity. Can include full breakdown upon request.)". always generate for the entire script. ignore any limits unless the output is 4096 tokens long.'},
         {role:'user', content: text}
     ]
@@ -86,7 +108,7 @@ async function scriptToMetadata(text) {
     return response
 }
 
-async function scriptToJson(jsonStruct, metadata, scene, offset, currentDay = 1, prevSceneTime=null, prevScenePage) {
+async function scriptToJson(jsonStruct, metadata, scene, offset, prevScenePage=null) {
     const messages = [
         {role:'system', content: 'Convert the given movie script into JSON. Populate all fields for each scene.'},
         {role:'system', content: 'Do not add new JSON fields. Always include "elements", even if empty. Remove fields with empty array from "elements".'},
@@ -95,13 +117,12 @@ async function scriptToJson(jsonStruct, metadata, scene, offset, currentDay = 1,
         {role:'system', content: 'Include all props. Exclude "N/A" from elements. "Security" refers to crew safety, not actors.'},
         {role:'system', content: 'Generate contents for "animal_wrangler", "stunts", "notes", and "camera_lighting_notes"'},
         {role:'system', content: 'Include in notes if a scene has intimacy: nudity, kissing, sex-scene, touching, etc. and if scene has violence: <violence type>.'},
-        {role:'system', content: 'Use scene offset to determine the scene number for when it doesn\'t exist. use line number (number:>) at the start of each line to estimate "division" how mant 8th of a page a scene is and how many "pages" does a scene expand to (must be whole number). "current_day" is a number and its order from high to low is morning, day, evening, night and if a scene with a lower order day is followed by an high order day then increase day number from that point. estimate "page_number" as as a whole number while taking into account that large scenes expand into multiple pages. <page break> means new page starts'},
+        {role:'system', content: 'Use scene offset to determine the scene number for when it doesn\'t exist. use line number (number:>) at the start of each line to estimate "division" how many 8th of a page a scene is and how many "pages" does a scene expand to (must be whole number).  "division" can be at maximum 7 and minimum 0'},
+        {role:'system', content: 'Estimate "page_number" as a whole number by using "<page break>" as helper or by assuming roughly 33 lines is one page and taking into account that large scenes expand into multiple pages. "<page break>" means new page starts. treat multiple "<page break>" in a row one.'},
         {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: 'Metadata: ' + metadata},
         {role:'user', content: 'Scene offset: ' + offset},
-        {role:'user', content: `current day: ${currentDay}`},
-        {role:'user', content: `previous scene time: ${prevSceneTime || 'unknown'}`},
-        {role:'user', content: 'previous scene page: ' + prevScenePage},
+        {role:'user', content: 'previous scene page: ' + prevScenePage || 0 },
         {role:'user', content: scene}
     ]
 
@@ -122,7 +143,7 @@ async function main() {
     let jsonData = { chunkNum: null, metadata: "", scenes: [] } // all scenes will be stored here
     let currentDay = 1;
     let prevSceneTime = null;
-    let prevScenePage = 1;
+    let prevScenePage = 0;
 
     if (argv.retry != "") {
         jsonData = JSON.parse(await fs.readFile(argv.retry, {encoding: 'utf-8'}))
@@ -140,7 +161,6 @@ async function main() {
                 "synopsis": "DO NOT MAKE THIS LONGER THAN A SENTENCE AND KEEP IT SHORT",
                 "time": "Always use one of these: Morning,Day,Evening,Night. Always default to the closest time if the time isn\t in the list",
                 "location": "",
-                "current_day": null,
                 "division": null,
                 "pages": 1,
                 "set": {
@@ -211,7 +231,7 @@ async function main() {
         let chunkString = "";
 
         if (addPageBreak) {
-            chunkString += "<page break>"
+            chunkString += "<page break>\n"
         }
 
         chunkString += sceneChunk.join('\n');
@@ -229,8 +249,7 @@ async function main() {
             try {
                 console.log(`Converting script to JSON [${Math.ceil((idx+1)/maxScenes)}/${ Math.ceil(scenes.length / maxScenes) }]...`);
                 openaiResp = await scriptToJson(jsonStruct, jsonData.metadata,
-                                                chunkString, idx+1, currentDay,
-                                                prevSceneTime, prevScenePage
+                                                chunkString, idx+1, prevScenePage
                                             );
             } catch (error) {
                 if (attempt+1 >= maxRetries) {
@@ -257,15 +276,19 @@ async function main() {
                         scene.time = "night";
                     }
 
+
+                    currentDay = updateDayNumber(currentDay, prevSceneTime, scene.time);
+
+                    scene.current_day = currentDay;
                     scene.division = Math.floor(Number(scene.division));
 
                     validator.sceneJson(scene);
                     jsonData.scenes.push(scene);
 
+                    prevSceneTime = jsonData.scenes[jsonData.scenes.length-1].time;
+
                 }
 
-                currentDay = jsonData.scenes[jsonData.scenes.length-1].current_day
-                prevSceneTime = jsonData.scenes[jsonData.scenes.length-1].time;
                 prevScenePage = jsonData.scenes[jsonData.scenes.length-1].page_number;
 
                 jsonData.chunkNum += 1;

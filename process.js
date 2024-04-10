@@ -92,7 +92,7 @@ async function scriptToMetadata(text) {
 
     const completion = await openai.chat.completions.create({
         messages: messages,
-        model: 'gpt-4-1106-preview',
+        model: 'gpt-4-turbo-2024-04-09',
         temperature: 0.1,
         stream: true
     });
@@ -128,7 +128,7 @@ async function scriptToJson(jsonStruct, metadata, scene, offset, prevScenePage=n
 
     const completion = await openai.chat.completions.create({
         messages: messages,
-        model: 'gpt-4-0125-preview',
+        model: 'gpt-4-turbo-2024-04-09',
         response_format: {'type': 'json_object'},
         temperature: 1
     });
@@ -159,7 +159,7 @@ async function main() {
                 "scene_number": "",
                 "page_number": 1,
                 "synopsis": "DO NOT MAKE THIS LONGER THAN A SENTENCE AND KEEP IT SHORT",
-                "time": "Always use one of these: Morning,Day,Evening,Night. Always default to the closest time if the time isn\t in the list",
+                "time": "Always USE: Morning , Day, Evening, Night. Always default to the closest time in the list if the time isn\t in the list",
                 "location": "",
                 "division": null,
                 "pages": 1,

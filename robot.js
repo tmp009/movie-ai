@@ -160,19 +160,14 @@ async function main() {
                 break;
         }
 
-        await client.keyTap('tab')
-
-        await client.writeTextTab(scene.pages)
-        await client.writeTextTab(scene.division)
-
+        await client.sendMultipleKeys(['tab', 'tab', 'tab'])
 
 
         // row 2
         await client.writeTextTab(scene.synopsis)
 
         // row 3
-        await client.writeTextTab(`${scene.page_number}${scene.pages - 1 ? '-' + (scene.page_number + scene.pages - 1 ) : ''}`)
-
+        await client.keyTap('tab')
 
         if (scene?.time?.toUpperCase() == 'NIGHT') {
             await client.writeTextTab('N' + scene.current_day)

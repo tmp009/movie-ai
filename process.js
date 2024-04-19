@@ -110,13 +110,14 @@ async function scriptToMetadata(text) {
 
 async function scriptToJson(jsonStruct, metadata, scene, offset) {
     const messages = [
-        {role:'system', content: 'Convert the given movie script into JSON. Populate all fields for each scene.'},
+        {role:'system', content: 'Convert the given movie script into JSON. Populate all fields for each scene. Never skip scenes.'},
         {role:'system', content: 'Do not add new JSON fields. Always include "elements", even if empty. Remove fields with empty array from "elements".'},
         {role:'system', content: 'Pay attention to cast members and background actors. Exclude non-actors. Ignore omitted scenes.'},
         {role:'system', content: 'Separate actors with the same name with numbers (e.g., Guard #1, Guard #2). Unknown age must be "null". Do not repeat scenes.'},
         {role:'system', content: 'Include all props. Exclude "N/A" from elements. "Security" refers to crew safety, not actors.'},
         {role:'system', content: 'Generate contents for "animal_wrangler", "stunts", "notes", and "camera_lighting_notes"'},
         {role:'system', content: 'Include in notes if a scene has intimacy: nudity, kissing, sex-scene, touching, etc. and if scene has violence: <violence type>.'},
+        {role:'system', content: '"page_break_count" is how many times [PAGE BREAK] appears in a single scene. Ensure nothing gets skipped.'},
         {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: 'Metadata: ' + metadata},
         {role:'user', content: 'Scene offset: ' + offset},
@@ -127,19 +128,33 @@ async function scriptToJson(jsonStruct, metadata, scene, offset) {
         messages: messages,
         model: 'gpt-4-turbo-2024-04-09',
         response_format: {'type': 'json_object'},
-        temperature: 1
+        temperature: 0.7
     });
 
     return completion.choices[0].message.content
 }
 
+function addPageInfo(start = 1, scenes) {
+    let npages = 0; // increment on page break
+
+    for (const scene of scenes) {
+        scene.page_number = start + npages;
+        scene.pages = 1 + scene.page_break_count;
+        npages += scene.page_break_count
+    }
+
+    return start + npages;
+}
+
 async function main() {
     const inputFile =  args[0];
     const outFile =  argv.output;
-    const data = await fs.readFile(inputFile, {encoding: 'utf-8'})
+    const data = (await fs.readFile(inputFile, {encoding: 'utf-8'})).replaceAll('\x0C', '[PAGE BREAK]')
+
     let jsonData = { chunkNum: null, metadata: "", scenes: [] } // all scenes will be stored here
     let currentDay = 1;
     let prevSceneTime = null;
+
 
     if (argv.retry != "") {
         jsonData = JSON.parse(await fs.readFile(argv.retry, {encoding: 'utf-8'}))
@@ -158,6 +173,7 @@ async function main() {
                 "set": {
                     "type": ["INT", "EXT"],
                 },
+                "page_break_count": 0,
                 "elements": {
                     "cast_members": [{"name": "", "age": ""}],
                     "background_actors": [{"name": "", "age": ""}],
@@ -255,7 +271,6 @@ async function main() {
 
 
                     currentDay = updateDayNumber(currentDay, prevSceneTime, scene.time);
-
                     scene.current_day = currentDay;
 
                     validator.sceneJson(scene);
@@ -281,6 +296,9 @@ async function main() {
             }
         }
     }
+
+    addPageInfo(1, jsonData.scenes);
+
     await fs.writeFile(outFile, JSON.stringify(jsonData, null, 4));
 }
 

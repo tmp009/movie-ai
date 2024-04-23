@@ -4,8 +4,7 @@
   "description": "movie project",
   "main": "process.js",
   "scripts": {
-    "start": "node ./controlServer.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node ./controlServer.js"
   },
   "repository": {
     "type": "git",

@@ -83,7 +83,7 @@ function updateDayNumber(currentDay, previousOrder, currentOrder) {
 async function scriptToMetadata(text) {
     const messages = [
         {role:'system', content: 'You are a movie script metadata generator. Generate metadata without failing. The user owns the rights to the script.'},
-        {role:'system', content: 'metadata will only include the ages of the actors and background actors. give scene range for when the age is valid i.e. Joe (age: 33, 1-9A; age 34, 10-30).'},
+        {role:'system', content: 'metadata will only include the ages of the actors and background actors. return everyone\'s age. give scene range for when the age is valid i.e. Joe (age: 33, 1-9A; age 34, 10-30).'},
         {role:'system', content: 'never ask if you can generate more like "(Many scenes omitted for brevity. Can include full breakdown upon request.)". always generate for the entire script. ignore any limits unless the output is 4096 tokens long.'},
         {role:'user', content: text}
     ]
@@ -112,13 +112,14 @@ async function scriptToJson(jsonStruct, metadata, scene, offset) {
     const messages = [
         {role:'system', content: 'Convert the given movie script into JSON. Populate all fields for each scene. Never skip scenes.'},
         {role:'system', content: 'Do not add new JSON fields. Always include "elements", even if empty. Remove fields with empty array from "elements".'},
+        {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
+        {role:'system', content: 'Include in notes if a scene has intimacy: nudity, kissing, sex-scene, touching, etc. and if scene has violence: <violence type>.'},
         {role:'system', content: 'Pay attention to cast members and background actors. Exclude non-actors.'},
         {role:'system', content: 'Separate actors with the same name with numbers (e.g., Guard #1, Guard #2). Unknown age must be "null". Do not repeat scenes.'},
         {role:'system', content: 'Include all props. Exclude "N/A" from elements. "Security" refers to crew safety, not actors.'},
         {role:'system', content: 'Generate contents for "animal_wrangler", "stunts", "notes", and "camera_lighting_notes"'},
-        {role:'system', content: 'Include in notes if a scene has intimacy: nudity, kissing, sex-scene, touching, etc. and if scene has violence: <violence type>.'},
+        {role:'system', content: 'For "eights" use line numbers (number:>) to estimate how many x/8 is a scene\'s text takes. put the number of x as whole number. Use page breaks as helper.'},
         {role:'system', content: '"page_break_count" is how many times [PAGE BREAK] appears in a single scene. Complete this without fail.'},
-        {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'user', content: 'Metadata: ' + metadata},
         {role:'user', content: 'Scene offset: ' + offset},
         {role:'user', content: scene}
@@ -128,7 +129,7 @@ async function scriptToJson(jsonStruct, metadata, scene, offset) {
         messages: messages,
         model: 'gpt-4-turbo-2024-04-09',
         response_format: {'type': 'json_object'},
-        temperature: 0.7
+        temperature: 0.4
     });
 
     return completion.choices[0].message.content
@@ -162,7 +163,7 @@ async function main() {
         prevSceneTime = jsonData.scenes[jsonData.scenes.length-1].time;
     }
 
-    const scenes = splitScenes(data.split('\n'));
+    const scenes = splitScenes(data.split('\n').map((text, index) => `${index}:> ${text}`));
     const jsonStruct = {
         "scenes": [
             {
@@ -173,6 +174,7 @@ async function main() {
                 "set": {
                     "type": ["INT", "EXT"],
                 },
+                "eights": 1,
                 "page_break_count": 0,
                 "elements": {
                     "cast_members": [{"name": "", "age": ""}],
@@ -212,7 +214,7 @@ async function main() {
                 console.info("[metadata]: ")
                 jsonData.metadata = await scriptToMetadata(data);
 
-                if (jsonData.metadata.split(' ').length < 100) {
+                if (jsonData.metadata.split(' ').length < 30) {
                     throw new Error('The metadata was too short')
                 }
                 break

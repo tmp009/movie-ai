@@ -6,6 +6,8 @@ const express = require('express');
 const { exec } = require('child_process');
 const fs = require('fs/promises');
 const path = require('path');
+const basicAuth = require('express-basic-auth')
+
 
 const port = process.env.PORT || 3000;
 const app = express();
@@ -36,6 +38,17 @@ let program;
 
 
 app.use(express.json())
+
+app.use(basicAuth({
+    users: { 'robot': process.env.ROBOT_PASSWORD || '' },
+    unauthorizedResponse: getUnauthorizedResponse
+}))
+
+function getUnauthorizedResponse(req) {
+    return req.auth
+        ? ('Credentials ' + req.auth.user + ':' + req.auth.password + ' rejected')
+        : 'No credentials provided'
+}
 
 app.post('/process', (req,res)=>{
     try {

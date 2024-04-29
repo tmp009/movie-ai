@@ -110,7 +110,7 @@ async function scriptToMetadata(text) {
 
 async function scriptToJson(jsonStruct, metadata, scene, offset) {
     const messages = [
-        {role:'system', content: 'Convert the given movie script into JSON. Populate all fields for each scene. Never skip scenes.'},
+        {role:'system', content: 'Convert the given movie script into JSON. Populate all fields for each scene. Include any short but not omitted skipped scenes even if there are no elements.'},
         {role:'system', content: 'Do not add new JSON fields. Always include "elements", even if empty. Remove fields with empty array from "elements".'},
         {role:'system', content: 'JSON structure: ' + JSON.stringify(jsonStruct)},
         {role:'system', content: 'Include in notes if a scene has intimacy: nudity, kissing, sex-scene, touching, etc. and if scene has violence: <violence type>.'},
@@ -118,7 +118,7 @@ async function scriptToJson(jsonStruct, metadata, scene, offset) {
         {role:'system', content: 'Separate actors with the same name with numbers (e.g., Guard #1, Guard #2). Unknown age must be "null". Do not repeat scenes.'},
         {role:'system', content: 'Include all props. Exclude "N/A" from elements. "Security" refers to crew safety, not actors.'},
         {role:'system', content: 'Generate contents for "animal_wrangler", "stunts", "notes", and "camera_lighting_notes"'},
-        {role:'system', content: 'For "eights" use line numbers (number:>) to estimate how many x/8 is a scene\'s text takes. put the number of x as whole number. Use page breaks as helper.'},
+        {role:'system', content: '"eights" is a scene\'s line number (number:>) count divided by 8 (i.e. 55 lines/8 = 7). Make sure if a scene is short that the number isn\'t set to 7. Put the number as a whole number. The number cannot be 8 or higher. Ignore scene name (i.g. INT. PLACEHOLDER - EVENING) line number. Use page breaks as helper.'},
         {role:'system', content: '"page_break_count" is how many times [PAGE BREAK] appears in a single scene. Complete this without fail.'},
         {role:'user', content: 'Metadata: ' + metadata},
         {role:'user', content: 'Scene offset: ' + offset},

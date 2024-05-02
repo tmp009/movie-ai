@@ -9,7 +9,7 @@ const path = require('path');
 const basicAuth = require('express-basic-auth')
 
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8080;
 const app = express();
 const MMSPATH = process.env.MMS_PATH || "C:\\Program Files (x86)\\Movie Magic\\MM Scheduling\\MM Scheduling.exe";
 const window = utils.getWindow('Movie Magic Scheduling 6');
